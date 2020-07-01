@@ -80,7 +80,7 @@ class MainActivity : AppCompatActivity() {
         when (requestCode) {
             101 -> {
                 if (grantResults.isEmpty() || grantResults[0] != PackageManager.PERMISSION_GRANTED) {
-                    PermissionsDialog(this@MainActivity, "To continue, give Zoho Social access to your Photos.").show()
+                    PermissionsDialog(this@MainActivity, "To continue, give permission to access to your Photos.").show()
                 } else doThis()
             }
         }

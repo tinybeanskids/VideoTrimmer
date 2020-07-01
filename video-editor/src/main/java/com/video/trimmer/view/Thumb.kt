@@ -44,11 +44,9 @@ class Thumb private constructor() {
                 if (i == 0) {
                     val resImageLeft = R.drawable.seek_left_handle
                     th.bitmap = BitmapFactory.decodeResource(resources, resImageLeft)
-//                    th.bitmap = drawableToBitmap(resources.getDrawable(R.drawable.seek_left_handle))
                 } else {
                     val resImageRight = R.drawable.seek_right_handle
                     th.bitmap = BitmapFactory.decodeResource(resources, resImageRight)
-//                    th.bitmap = drawableToBitmap(resources.getDrawable(R.drawable.seek_right_handle))
                 }
                 thumbs.add(th)
             }

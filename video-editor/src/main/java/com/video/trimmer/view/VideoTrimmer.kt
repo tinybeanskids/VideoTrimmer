@@ -23,12 +23,23 @@ import com.video.trimmer.interfaces.OnProgressVideoListener
 import com.video.trimmer.interfaces.OnRangeSeekBarListener
 import com.video.trimmer.interfaces.OnTrimVideoListener
 import com.video.trimmer.interfaces.OnVideoListener
-import com.video.trimmer.utils.*
-import kotlinx.android.synthetic.main.view_trimmer.view.*
+import com.video.trimmer.utils.BackgroundExecutor
+import com.video.trimmer.utils.RealPathUtil
+import com.video.trimmer.utils.TrimVideoUtils
+import com.video.trimmer.utils.UiThreadExecutor
+import com.video.trimmer.utils.VideoOptions
+import kotlinx.android.synthetic.main.view_trimmer.view.handlerTop
+import kotlinx.android.synthetic.main.view_trimmer.view.icon_video_play
+import kotlinx.android.synthetic.main.view_trimmer.view.layout_surface_view
+import kotlinx.android.synthetic.main.view_trimmer.view.textTimeSelection
+import kotlinx.android.synthetic.main.view_trimmer.view.timeFrame
+import kotlinx.android.synthetic.main.view_trimmer.view.timeLineBar
+import kotlinx.android.synthetic.main.view_trimmer.view.timeLineView
+import kotlinx.android.synthetic.main.view_trimmer.view.video_loader
 import java.io.File
 import java.lang.ref.WeakReference
-import java.util.*
-
+import java.util.ArrayList
+import java.util.Calendar
 
 class VideoTrimmer @JvmOverloads constructor(context: Context, attrs: AttributeSet, defStyleAttr: Int = 0) : FrameLayout(context, attrs, defStyleAttr) {
 
@@ -298,10 +309,18 @@ class VideoTrimmer @JvmOverloads constructor(context: Context, attrs: AttributeS
         when (index) {
             Thumb.LEFT -> {
                 mStartPosition = (mDuration * value / 100L)
+                if (mMaxDuration != -1 && mEndPosition - mStartPosition > mMaxDuration) {
+                    val offset = mEndPosition - mStartPosition - mMaxDuration
+                    mEndPosition -= offset
+                }
                 video_loader.seekTo(mStartPosition.toInt())
             }
             Thumb.RIGHT -> {
                 mEndPosition = (mDuration * value / 100L)
+                if (mMaxDuration != -1 && mEndPosition - mStartPosition > mMaxDuration) {
+                    val offset = mEndPosition - mStartPosition - mMaxDuration
+                    mStartPosition += offset
+                }
             }
         }
         setTimeFrames()

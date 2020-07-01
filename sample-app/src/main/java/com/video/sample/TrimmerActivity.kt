@@ -36,9 +36,8 @@ class TrimmerActivity : AppCompatActivity(), OnTrimVideoListener, OnVideoListene
                     .setOnVideoListener(this)
                     .setVideoURI(Uri.parse(path))
                     .setVideoInformationVisibility(true)
-                    .setMaxDuration(10)
-                    .setMinDuration(2)
-                    .setDestinationPath(Environment.getExternalStorageDirectory().toString() + File.separator + "Zoho Social" + File.separator + "Videos" + File.separator)
+                    .setMaxDuration(120)
+                    .setDestinationPath(Environment.getExternalStorageDirectory().toString() + File.separator + "video-editor" + File.separator + "Videos" + File.separator)
         }
 
         back.setOnClickListener {
@@ -107,7 +106,7 @@ class TrimmerActivity : AppCompatActivity(), OnTrimVideoListener, OnVideoListene
         when (requestCode) {
             101 -> {
                 if (grantResults.isEmpty() || grantResults[0] != PackageManager.PERMISSION_GRANTED) {
-                    PermissionsDialog(this@TrimmerActivity, "To continue, give Zoho Social access to your Photos.").show()
+                    PermissionsDialog(this@TrimmerActivity, "To continue, approve access to your Photos.").show()
                 } else doThis()
             }
         }
