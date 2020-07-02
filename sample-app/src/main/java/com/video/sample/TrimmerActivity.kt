@@ -36,7 +36,7 @@ class TrimmerActivity : AppCompatActivity(), OnTrimVideoListener, OnVideoListene
                     .setOnVideoListener(this)
                     .setVideoURI(Uri.parse(path))
                     .setVideoInformationVisibility(true)
-                    .setMaxDuration(120)
+                    .setMaxDuration(60)
                     .setDestinationPath(Environment.getExternalStorageDirectory().toString() + File.separator + "video-editor" + File.separator + "Videos" + File.separator)
         }
 
@@ -45,14 +45,8 @@ class TrimmerActivity : AppCompatActivity(), OnTrimVideoListener, OnVideoListene
         }
 
         save.setOnClickListener {
-            videoTrimmer.onSaveClicked()
-        }
-    }
-
-    override fun onTrimStarted() {
-        RunOnUiThread(this).safely {
-            Toast.makeText(this, "Started Trimming", Toast.LENGTH_SHORT).show()
             progressDialog.show()
+            videoTrimmer.onSaveClicked()
         }
     }
 

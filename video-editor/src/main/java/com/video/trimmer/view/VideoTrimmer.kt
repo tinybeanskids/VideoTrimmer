@@ -180,7 +180,6 @@ class VideoTrimmer @JvmOverloads constructor(context: Context, attrs: AttributeS
     }
 
     fun onSaveClicked() {
-        mOnTrimVideoListener?.onTrimStarted()
         icon_video_play.visibility = View.VISIBLE
         video_loader.pause()
 
@@ -207,7 +206,7 @@ class VideoTrimmer @JvmOverloads constructor(context: Context, attrs: AttributeS
         try {
             extractor.setDataSource(file.path)
             val numTracks = extractor.trackCount
-            for (i in 0..numTracks) {
+            for (i in 0..numTracks-1) {
                 val format = extractor.getTrackFormat(i)
                 val mime = format.getString(MediaFormat.KEY_MIME)
                 if (mime.startsWith("video/")) {

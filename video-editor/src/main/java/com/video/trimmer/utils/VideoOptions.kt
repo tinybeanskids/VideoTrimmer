@@ -70,7 +70,6 @@ class VideoOptions(private var ctx: Context) {
             override fun onStart() {
             }
         })
-        listener?.onTrimStarted()
     }
 
     fun cropVideo(width: Int, height: Int, x: Int, y: Int, inputPath: String, outputPath: String, outputFileUri: Uri, listener: OnCropVideoListener?, frameCount: Int) {
