@@ -42,10 +42,10 @@ class Thumb private constructor() {
                 val th = Thumb()
                 th.index = i
                 if (i == 0) {
-                    val resImageLeft = R.drawable.seek_left_handle
+                    val resImageLeft = R.drawable.seek_left_handle_sunrise_white
                     th.bitmap = BitmapFactory.decodeResource(resources, resImageLeft)
                 } else {
-                    val resImageRight = R.drawable.seek_right_handle
+                    val resImageRight = R.drawable.seek_right_handle_sunrise_white
                     th.bitmap = BitmapFactory.decodeResource(resources, resImageRight)
                 }
                 thumbs.add(th)
