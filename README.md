@@ -1,9 +1,9 @@
 # Video Trimmer
 [![License](https://img.shields.io/badge/license-Apache%202-4EB1BA.svg?style=flat-square)](https://www.apache.org/licenses/LICENSE-2.0.html)
-[![](https://jitpack.io/v/tizisdeepan/videoeditor.svg)](https://jitpack.io/#tizisdeepan/videoeditor)
+[![](https://jitpack.io/v/tinybeanskids/VideoTrimmer.svg)](https://jitpack.io/#tinybeanskids/VideoTrimmer)
 
 <table>
-    <tr><td align="center"><img src="https://user-images.githubusercontent.com/3142641/86253354-bac1ec80-bbb4-11ea-827f-a2793c39c915.jpg" alt="Video Trimmer" width="50%"></td>
+    <tr><td align="center"><img src="https://user-images.githubusercontent.com/3142641/88227598-22c49980-cc6e-11ea-85dc-454c5241901e.png" alt="Video Trimmer" width="50%"></td>
     <tr><td align="center"><b>Video Trimmer</b></td>
 </table>
 
@@ -14,7 +14,7 @@ FFmpeg is a powerful multimedia framework which allows us to decode, encode, tra
 ### [1] In your app module gradle file
 ```gradle
 dependencies {
-    implementation 'com.github.MenilV:videoeditor:1.0.2'
+    implementation 'com.github.tinybeanskids:videoeditor:1.0.4'
 }
 ```
 
@@ -34,12 +34,10 @@ allprojects {
         android:layout_height="match_parent"
         android:layout_below="@+id/header"/>
 ```
-### [5] Implement OnTrimVideoListener on your Activity/ Fragment
+### [4] Implement OnTrimVideoListener on your Activity/ Fragment
 ```kotlin
 class MainActivity : AppCompatActivity(), OnTrimVideoListener {
     ...
-    override fun onTrimStarted(){
-    }
     override fun getResult(uri: Uri){
     }
     override fun cancelAction(){
@@ -48,7 +46,7 @@ class MainActivity : AppCompatActivity(), OnTrimVideoListener {
     }
 }
 ```
-### [7] Create instances and set default values for the VideoTrimmer in your Activity/ Fragment
+### [5] Create instances and set default values for the VideoTrimmer in your Activity/ Fragment
 ```kotlin
 videoTrimmer.setTextTimeSelectionTypeface(FontsHelper[this, FontsConstants.SEMI_BOLD])
                     .setOnTrimVideoListener(this)
