@@ -223,7 +223,7 @@ class VideoTrimmer @JvmOverloads constructor(context: Context, attrs: AttributeS
         val duration = java.lang.Long.parseLong(mediaMetadataRetriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION))
         Log.e("FRAME RATE", frameRate.toString())
         Log.e("FRAME COUNT", (duration / 1000 * frameRate).toString())
-        VideoOptions(context).trimVideo(TrimVideoUtils.stringForTime(mStartPosition), TrimVideoUtils.stringForTime(mEndPosition), file.path, outPutPath, outputFileUri, mOnTrimVideoListener)
+        VideoOptions().trimVideo(TrimVideoUtils.stringForTime(mStartPosition), TrimVideoUtils.stringForTime(mEndPosition), file.path, outPutPath, outputFileUri, mOnTrimVideoListener)
     }
 
     private fun onClickVideoPlayPause() {

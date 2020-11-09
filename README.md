@@ -14,7 +14,7 @@ FFmpeg is a powerful multimedia framework which allows us to decode, encode, tra
 ### [1] In your app module gradle file
 ```gradle
 dependencies {
-    implementation 'com.github.tinybeanskids:videoeditor:1.0.4'
+    implementation 'com.github.tinybeanskids:videoeditor:1.0.5'
 }
 ```
 
@@ -34,7 +34,7 @@ allprojects {
         android:layout_height="match_parent"
         android:layout_below="@+id/header"/>
 ```
-### [4] Implement OnTrimVideoListener on your Activity/ Fragment
+### [4] Implement OnTrimVideoListener on your Activity/Fragment
 ```kotlin
 class MainActivity : AppCompatActivity(), OnTrimVideoListener {
     ...
