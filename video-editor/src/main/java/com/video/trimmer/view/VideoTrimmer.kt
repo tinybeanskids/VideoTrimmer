@@ -61,6 +61,7 @@ class VideoTrimmer @JvmOverloads constructor(context: Context, attrs: AttributeS
     private var mResetSeekBar = true
     private val mMessageHandler = MessageHandler(this)
 
+    private lateinit var destinationFile: File
     private var destinationPath: String
         get() {
             if (mFinalPath == null) {
@@ -194,11 +195,15 @@ class VideoTrimmer @JvmOverloads constructor(context: Context, attrs: AttributeS
             else if (mStartPosition > MIN_TIME_FRAME - mTimeVideo) mStartPosition -= MIN_TIME_FRAME - mTimeVideo
         }
 
-        val root = File(destinationPath)
-        root.mkdirs()
-        val outputFileUri = Uri.fromFile(File(root, "t_${Calendar.getInstance().timeInMillis}_" + file.nameWithoutExtension + ".mp4"))
-        val outPutPath = RealPathUtil.realPathFromUriApi19(context, outputFileUri)
-                ?: File(root, "t_${Calendar.getInstance().timeInMillis}_" + mSrc.path?.substring(mSrc.path!!.lastIndexOf("/") + 1)).absolutePath
+//        val root = File(destinationPath)
+//        root.mkdirs()
+
+
+
+        val outputFileUri = Uri.fromFile(destinationFile)
+//        val outputFileUri = Uri.fromFile(File(root, "t_${Calendar.getInstance().timeInMillis}_" + file.nameWithoutExtension + ".mp4"))
+//        val outPutPath = RealPathUtil.realPathFromUriApi19(context, outputFileUri) ?: File(root, "t_${Calendar.getInstance().timeInMillis}_" + mSrc.path?.substring(mSrc.path!!.lastIndexOf("/") + 1)).absolutePath
+        val outPutPath = RealPathUtil.realPathFromUriApi19(context, outputFileUri) ?: destinationFile.absolutePath
         Log.e("SOURCE", file.path)
         Log.e("DESTINATION", outPutPath)
         val extractor = MediaExtractor()
@@ -223,7 +228,7 @@ class VideoTrimmer @JvmOverloads constructor(context: Context, attrs: AttributeS
         val duration = java.lang.Long.parseLong(mediaMetadataRetriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION))
         Log.e("FRAME RATE", frameRate.toString())
         Log.e("FRAME COUNT", (duration / 1000 * frameRate).toString())
-        VideoOptions().trimVideo(TrimVideoUtils.stringForTime(mStartPosition), TrimVideoUtils.stringForTime(mEndPosition), file.path, outPutPath, outputFileUri, mOnTrimVideoListener)
+        VideoOptions().trimVideo(TrimVideoUtils.stringForTime(mStartPosition), TrimVideoUtils.stringForTime(mEndPosition), file.path, outPutPath, destinationFile, mOnTrimVideoListener)
     }
 
     private fun onClickVideoPlayPause() {
@@ -394,6 +399,10 @@ class VideoTrimmer @JvmOverloads constructor(context: Context, attrs: AttributeS
 
     fun setDestinationPath(path: String): VideoTrimmer {
         destinationPath = path
+        return this
+    }
+    fun setDestinationFile(file: File): VideoTrimmer {
+        destinationFile = file
         return this
     }
 

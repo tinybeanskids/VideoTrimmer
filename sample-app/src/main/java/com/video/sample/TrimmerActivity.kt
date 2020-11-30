@@ -7,13 +7,12 @@ import android.content.pm.PackageManager
 import android.media.MediaMetadataRetriever
 import android.net.Uri
 import android.os.Bundle
-import android.os.Environment
 import android.provider.MediaStore
-import androidx.core.app.ActivityCompat
-import androidx.core.content.ContextCompat
 import android.util.Log
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import com.video.trimmer.interfaces.OnTrimVideoListener
 import com.video.trimmer.interfaces.OnVideoListener
 import kotlinx.android.synthetic.main.activity_trimmer.*
@@ -37,7 +36,7 @@ class TrimmerActivity : AppCompatActivity(), OnTrimVideoListener, OnVideoListene
                     .setVideoURI(Uri.parse(path))
                     .setVideoInformationVisibility(true)
                     .setMaxDuration(60)
-                    .setDestinationPath(Environment.getExternalStorageDirectory().toString() + File.separator + "video-editor" + File.separator + "Videos" + File.separator)
+                    .setDestinationFile(getDestinationFile())
         }
 
         back.setOnClickListener {
@@ -50,9 +49,15 @@ class TrimmerActivity : AppCompatActivity(), OnTrimVideoListener, OnVideoListene
         }
     }
 
-    override fun getResult(uri: Uri) {
+    private fun getDestinationFile(): File {
+        return File.createTempFile("neki-temp-video", ".mp4", this.cacheDir)
+    }
+
+    override fun getResult(file: File) {
         RunOnUiThread(this).safely {
+            val uri = Uri.fromFile(file)
             Toast.makeText(this, "Video saved at ${uri.path}", Toast.LENGTH_SHORT).show()
+
             progressDialog.dismiss()
             val mediaMetadataRetriever = MediaMetadataRetriever()
             mediaMetadataRetriever.setDataSource(this, uri)
@@ -64,8 +69,12 @@ class TrimmerActivity : AppCompatActivity(), OnTrimVideoListener, OnVideoListene
             values.put(MediaStore.Video.VideoColumns.DURATION, duration)
             values.put(MediaStore.Video.VideoColumns.WIDTH, width)
             values.put(MediaStore.Video.VideoColumns.HEIGHT, height)
-            val id = ContentUris.parseId(contentResolver.insert(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, values))
-            Log.e("VIDEO ID", id.toString())
+            try {
+                val id = ContentUris.parseId(contentResolver.insert(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, values))
+                Log.e("VIDEO ID", id.toString())
+            } catch (e: Exception) {
+                Log.e("Video ID:", "Error trying to insert file: ${file.absoluteFile}")
+            }
         }
     }
 
@@ -104,5 +113,6 @@ class TrimmerActivity : AppCompatActivity(), OnTrimVideoListener, OnVideoListene
                 } else doThis()
             }
         }
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
     }
 }

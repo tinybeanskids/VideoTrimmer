@@ -1,9 +1,9 @@
 package com.video.trimmer.interfaces
 
-import android.net.Uri
+import java.io.File
 
 interface OnTrimVideoListener {
-    fun getResult(uri: Uri)
+    fun getResult(file: File)
     fun cancelAction()
     fun onError(message: String)
 }
