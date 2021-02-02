@@ -10,25 +10,27 @@ import java.io.File
 
 
 class VideoOptions {
-    companion object {
-        const val TAG = "VideoOptions"
-    }
 
     fun trimVideo(startPosition: String, endPosition: String, inputPath: String, outputPath: String, file: File, listener: OnTrimVideoListener?) {
         // compress: arrayOf("-i", inputPath, "-vf", "scale=$width:$height", outputPath) //iw:ih
         // crop: arrayOf("-i", inputPath, "-filter:v", "crop=$width:$height:$x:$y", "-threads", "5", "-preset", "ultrafast", "-strict", "-2", "-c:a", "copy", outputPath)
-        val rc = FFmpeg.execute("-y -i $inputPath -ss $startPosition -to $endPosition -c copy $outputPath")
+        try {
+            val rc = FFmpeg.execute("-y -i \"$inputPath\" -ss $startPosition -to $endPosition -c copy $outputPath")
 
-        if (rc == RETURN_CODE_SUCCESS) {
-            listener?.getResult(file)
-            Log.i(Config.TAG, "Command execution completed successfully.");
-        } else if (rc == RETURN_CODE_CANCEL) {
-            listener?.onError("canceled")
-            Log.i(Config.TAG, "Command execution cancelled by user.");
-        } else {
-            listener?.onError("error")
-            Log.i(Config.TAG, String.format("Command execution failed with rc=%d and the output below.", rc));
-            Config.printLastCommandOutput(Log.INFO)
+            when (rc) {
+                RETURN_CODE_SUCCESS -> {
+                    listener?.getResult(file)
+                }
+                RETURN_CODE_CANCEL -> {
+                    listener?.onError("Command execution cancelled by user.")
+                }
+                else -> {
+                    listener?.onError(String.format("Command execution failed with rc=%d and the output below.", rc))
+                    Config.printLastCommandOutput(Log.INFO)
+                }
+            }
+        } catch (e: Exception) {
+            listener?.onError(e.localizedMessage ?: "generic error")
         }
     }
 }

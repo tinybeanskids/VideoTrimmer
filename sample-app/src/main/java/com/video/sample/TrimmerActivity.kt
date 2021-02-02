@@ -89,6 +89,10 @@ class TrimmerActivity : AppCompatActivity(), OnTrimVideoListener, OnVideoListene
         Log.e("ERROR", message)
     }
 
+    override fun onInfo(info: String) {
+        Toast.makeText(this, info, Toast.LENGTH_LONG).show()
+    }
+
     override fun onVideoPrepared() {
         RunOnUiThread(this).safely {
             Toast.makeText(this, "onVideoPrepared", Toast.LENGTH_SHORT).show()

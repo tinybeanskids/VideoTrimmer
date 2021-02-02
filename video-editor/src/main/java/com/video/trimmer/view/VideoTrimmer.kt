@@ -195,17 +195,10 @@ class VideoTrimmer @JvmOverloads constructor(context: Context, attrs: AttributeS
             else if (mStartPosition > MIN_TIME_FRAME - mTimeVideo) mStartPosition -= MIN_TIME_FRAME - mTimeVideo
         }
 
-//        val root = File(destinationPath)
-//        root.mkdirs()
-
-
-
         val outputFileUri = Uri.fromFile(destinationFile)
-//        val outputFileUri = Uri.fromFile(File(root, "t_${Calendar.getInstance().timeInMillis}_" + file.nameWithoutExtension + ".mp4"))
-//        val outPutPath = RealPathUtil.realPathFromUriApi19(context, outputFileUri) ?: File(root, "t_${Calendar.getInstance().timeInMillis}_" + mSrc.path?.substring(mSrc.path!!.lastIndexOf("/") + 1)).absolutePath
         val outPutPath = RealPathUtil.realPathFromUriApi19(context, outputFileUri) ?: destinationFile.absolutePath
-        Log.e("SOURCE", file.path)
-        Log.e("DESTINATION", outPutPath)
+        mOnTrimVideoListener?.onInfo("SOURCE ${file.path}")
+        mOnTrimVideoListener?.onInfo("DESTINATION $outPutPath")
         val extractor = MediaExtractor()
         var frameRate = 24
         try {
@@ -226,8 +219,8 @@ class VideoTrimmer @JvmOverloads constructor(context: Context, attrs: AttributeS
             extractor.release()
         }
         val duration = java.lang.Long.parseLong(mediaMetadataRetriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION))
-        Log.e("FRAME RATE", frameRate.toString())
-        Log.e("FRAME COUNT", (duration / 1000 * frameRate).toString())
+        mOnTrimVideoListener?.onInfo("FRAME RATE $frameRate")
+        mOnTrimVideoListener?.onInfo("FRAME COUNT ${(duration / 1000 * frameRate)}")
         VideoOptions().trimVideo(TrimVideoUtils.stringForTime(mStartPosition), TrimVideoUtils.stringForTime(mEndPosition), file.path, outPutPath, destinationFile, mOnTrimVideoListener)
     }
 

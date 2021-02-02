@@ -6,4 +6,5 @@ interface OnTrimVideoListener {
     fun getResult(file: File)
     fun cancelAction()
     fun onError(message: String)
+    fun onInfo(info: String)
 }
