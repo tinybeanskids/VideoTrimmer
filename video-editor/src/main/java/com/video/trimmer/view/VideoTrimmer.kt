@@ -10,6 +10,8 @@ import android.net.Uri
 import android.os.Environment
 import android.os.Handler
 import android.os.Message
+import android.os.ParcelFileDescriptor
+import android.provider.DocumentsContract
 import android.util.AttributeSet
 import android.util.Log
 import android.view.GestureDetector
@@ -37,9 +39,10 @@ import kotlinx.android.synthetic.main.view_trimmer.view.timeLineBar
 import kotlinx.android.synthetic.main.view_trimmer.view.timeLineView
 import kotlinx.android.synthetic.main.view_trimmer.view.video_loader
 import java.io.File
+import java.io.FileNotFoundException
+import java.io.InputStream
 import java.lang.ref.WeakReference
-import java.util.ArrayList
-import java.util.Calendar
+import java.util.*
 
 class VideoTrimmer @JvmOverloads constructor(context: Context, attrs: AttributeSet, defStyleAttr: Int = 0) : FrameLayout(context, attrs, defStyleAttr) {
 
@@ -197,17 +200,17 @@ class VideoTrimmer @JvmOverloads constructor(context: Context, attrs: AttributeS
 
         val outputFileUri = Uri.fromFile(destinationFile)
         val outPutPath = RealPathUtil.realPathFromUriApi19(context, outputFileUri) ?: destinationFile.absolutePath
-        mOnTrimVideoListener?.onInfo("SOURCE ${file.path}")
+        mOnTrimVideoListener?.onInfo("SOURCE ${safUriToFFmpegPath(mSrc)}")
         mOnTrimVideoListener?.onInfo("DESTINATION $outPutPath")
         val extractor = MediaExtractor()
         var frameRate = 24
         try {
-            extractor.setDataSource(file.path)
+            extractor.setDataSource(context, mSrc, null)
             val numTracks = extractor.trackCount
             for (i in 0..numTracks-1) {
                 val format = extractor.getTrackFormat(i)
                 val mime = format.getString(MediaFormat.KEY_MIME)
-                if (mime.startsWith("video/")) {
+                if (mime!!.startsWith("video/")) {
                     if (format.containsKey(MediaFormat.KEY_FRAME_RATE)) {
                         frameRate = format.getInteger(MediaFormat.KEY_FRAME_RATE)
                     }
@@ -221,7 +224,40 @@ class VideoTrimmer @JvmOverloads constructor(context: Context, attrs: AttributeS
         val duration = java.lang.Long.parseLong(mediaMetadataRetriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION))
         mOnTrimVideoListener?.onInfo("FRAME RATE $frameRate")
         mOnTrimVideoListener?.onInfo("FRAME COUNT ${(duration / 1000 * frameRate)}")
-        VideoOptions().trimVideo(TrimVideoUtils.stringForTime(mStartPosition), TrimVideoUtils.stringForTime(mEndPosition), file.path, outPutPath, destinationFile, mOnTrimVideoListener)
+
+        //copy file to memory
+        val inputCopy = File.createTempFile("temp-video-input", ".mp4", context.cacheDir)
+        context.contentResolver.openInputStream(mSrc)?.apply {
+            //save to cache
+            inputCopy.copyInputStreamToFile(this)
+        }
+        //trim
+
+        VideoOptions().trimVideoFromMemory(
+                TrimVideoUtils.stringForTime(mStartPosition),
+                TrimVideoUtils.stringForTime(mEndPosition),
+                inputCopy.path,
+//                file.path, //old
+//                safUriToFFmpegPath(mSrc), //todo used for android 11 with pipe protocol
+                outPutPath,
+                destinationFile, mOnTrimVideoListener)
+        //remove original copy from cache
+    }
+
+    private fun safUriToFFmpegPath(uri: Uri): String {
+        return try {
+            val parcelFileDescriptor: ParcelFileDescriptor? = context.contentResolver.openFileDescriptor(uri, "r")
+            java.lang.String.format(Locale.getDefault(), "pipe:%d", parcelFileDescriptor?.fd)
+        } catch (e: FileNotFoundException) {
+            e.printStackTrace()
+            "null"
+        }
+    }
+
+    fun File.copyInputStreamToFile(inputStream: InputStream) {
+        this.outputStream().use { fileOut ->
+            inputStream.copyTo(fileOut)
+        }
     }
 
     private fun onClickVideoPlayPause() {
@@ -299,7 +335,7 @@ class VideoTrimmer @JvmOverloads constructor(context: Context, attrs: AttributeS
 
     private fun setTimeFrames() {
         val seconds = context.getString(R.string.short_seconds)
-        textTimeSelection.text = String.format("%s %s - %s %s", TrimVideoUtils.stringForTime(mStartPosition), seconds, TrimVideoUtils.stringForTime(mEndPosition), seconds)
+        textTimeSelection.text = String.format("%s %s - %s %s", TrimVideoUtils.stringForPreviewTime(mStartPosition), seconds, TrimVideoUtils.stringForPreviewTime(mEndPosition), seconds)
     }
 
     private fun onSeekThumbs(index: Int, value: Float) {

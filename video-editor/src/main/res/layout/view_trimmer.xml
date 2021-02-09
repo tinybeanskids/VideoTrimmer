@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<RelativeLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    xmlns:tools="http://schemas.android.com/tools"
     android:background="#2f3031"
     android:orientation="vertical"
     >
@@ -66,6 +68,7 @@
           android:paddingBottom="@dimen/_3sdp"
           android:textColor="#efc43b"
           android:textSize="@dimen/text_small"
+          tools:text="00:00:00 sec - 00:14:12"
           />
 
     </RelativeLayout>
@@ -109,6 +112,7 @@
           android:secondaryProgress="0"
           android:thumb="@drawable/seek_line"
           android:visibility="gone"
+          tools:visibility="visible"
           />
 
       <com.video.trimmer.view.RangeSeekBarView
