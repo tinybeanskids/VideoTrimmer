@@ -51,7 +51,7 @@ class MainActivity : AppCompatActivity(), OnTrimVideoListener {
 videoTrimmer.setTextTimeSelectionTypeface(FontsHelper[this, FontsConstants.SEMI_BOLD])
                     .setOnTrimVideoListener(this)
                     .setOnVideoListener(this)
-                    .setVideoURI(Uri.parse(path))
+                    .setVideoURI(uri)
                     .setVideoInformationVisibility(true)
                     .setMaxDuration(10)
                     .setMinDuration(2)

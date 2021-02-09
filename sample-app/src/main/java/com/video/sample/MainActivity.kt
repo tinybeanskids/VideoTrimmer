@@ -27,7 +27,7 @@ class MainActivity : AppCompatActivity() {
         setupPermissions {
             val intent = Intent()
             intent.setTypeAndNormalize("video/*")
-            intent.action = Intent.ACTION_GET_CONTENT
+            intent.action = Intent.ACTION_OPEN_DOCUMENT
             intent.addCategory(Intent.CATEGORY_OPENABLE)
             startActivityForResult(Intent.createChooser(intent, getString(R.string.label_select_video)), intentCode)
         }
@@ -56,7 +56,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun startTrimActivity(uri: Uri) {
         val intent = Intent(this, TrimmerActivity::class.java)
-        intent.putExtra(EXTRA_VIDEO_PATH, FileUtils.getPath(this, uri))
+        intent.putExtra(EXTRA_VIDEO_PATH, uri.toString())
         startActivity(intent)
     }
 
