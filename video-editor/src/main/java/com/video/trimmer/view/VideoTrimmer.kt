@@ -25,11 +25,7 @@ import com.video.trimmer.interfaces.OnProgressVideoListener
 import com.video.trimmer.interfaces.OnRangeSeekBarListener
 import com.video.trimmer.interfaces.OnTrimVideoListener
 import com.video.trimmer.interfaces.OnVideoListener
-import com.video.trimmer.utils.BackgroundExecutor
-import com.video.trimmer.utils.RealPathUtil
-import com.video.trimmer.utils.TrimVideoUtils
-import com.video.trimmer.utils.UiThreadExecutor
-import com.video.trimmer.utils.VideoOptions
+import com.video.trimmer.utils.*
 import kotlinx.android.synthetic.main.view_trimmer.view.handlerTop
 import kotlinx.android.synthetic.main.view_trimmer.view.icon_video_play
 import kotlinx.android.synthetic.main.view_trimmer.view.layout_surface_view
@@ -191,8 +187,6 @@ class VideoTrimmer @JvmOverloads constructor(context: Context, attrs: AttributeS
         mediaMetadataRetriever.setDataSource(context, mSrc)
         val metaDataKeyDuration = java.lang.Long.parseLong(mediaMetadataRetriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION))
 
-        val file = File(mSrc.path ?: "")
-
         if (mTimeVideo < MIN_TIME_FRAME) {
             if (metaDataKeyDuration - mEndPosition > MIN_TIME_FRAME - mTimeVideo) mEndPosition += MIN_TIME_FRAME - mTimeVideo
             else if (mStartPosition > MIN_TIME_FRAME - mTimeVideo) mStartPosition -= MIN_TIME_FRAME - mTimeVideo
@@ -237,7 +231,6 @@ class VideoTrimmer @JvmOverloads constructor(context: Context, attrs: AttributeS
                 TrimVideoUtils.stringForTime(mStartPosition),
                 TrimVideoUtils.stringForTime(mEndPosition),
                 inputCopy.path,
-//                file.path, //old
 //                safUriToFFmpegPath(mSrc), //todo used for android 11 with pipe protocol
                 outPutPath,
                 destinationFile, mOnTrimVideoListener)
@@ -251,12 +244,6 @@ class VideoTrimmer @JvmOverloads constructor(context: Context, attrs: AttributeS
         } catch (e: FileNotFoundException) {
             e.printStackTrace()
             "null"
-        }
-    }
-
-    fun File.copyInputStreamToFile(inputStream: InputStream) {
-        this.outputStream().use { fileOut ->
-            inputStream.copyTo(fileOut)
         }
     }
 
