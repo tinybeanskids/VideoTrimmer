@@ -1,6 +1,5 @@
 package com.video.trimmer.utils
 
-import java.time.Duration
 import java.util.*
 import kotlin.math.roundToInt
 
