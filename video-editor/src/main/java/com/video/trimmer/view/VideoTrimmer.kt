@@ -60,6 +60,8 @@ class VideoTrimmer @JvmOverloads constructor(context: Context, attrs: AttributeS
     private var mResetSeekBar = true
     private val mMessageHandler = MessageHandler(this)
 
+    private var mMaxSize = -1
+
     private lateinit var destinationFile: File
     private var destinationPath: String
         get() {
@@ -233,7 +235,10 @@ class VideoTrimmer @JvmOverloads constructor(context: Context, attrs: AttributeS
                 inputCopy.path,
 //                safUriToFFmpegPath(mSrc), //todo used for android 11 with pipe protocol
                 outPutPath,
-                destinationFile, mOnTrimVideoListener)
+                destinationFile,
+                mOnTrimVideoListener,
+                mMaxSize)
+
         //remove original copy from cache
     }
 
@@ -405,6 +410,11 @@ class VideoTrimmer @JvmOverloads constructor(context: Context, attrs: AttributeS
 
     fun setMaxDuration(maxDuration: Int): VideoTrimmer {
         mMaxDuration = maxDuration * 1000
+        return this
+    }
+
+    fun setMaxSize(maxSize: Int): VideoTrimmer {
+        mMaxSize = maxSize * 1000
         return this
     }
 
