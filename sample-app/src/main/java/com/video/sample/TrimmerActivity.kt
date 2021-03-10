@@ -29,13 +29,15 @@ class TrimmerActivity : AppCompatActivity(), OnTrimVideoListener, OnVideoListene
         setupPermissions {
             val extraIntent = intent
             var path = ""
-            if (extraIntent != null) path = extraIntent.getStringExtra(MainActivity.EXTRA_VIDEO_PATH)?:""
+            if (extraIntent != null) path = extraIntent.getStringExtra(MainActivity.EXTRA_VIDEO_PATH)
+                    ?: ""
             videoTrimmer.setTextTimeSelectionTypeface(FontsHelper[this, FontsConstants.SEMI_BOLD])
                     .setOnTrimVideoListener(this)
                     .setOnVideoListener(this)
                     .setVideoURI(Uri.parse(path))
                     .setVideoInformationVisibility(true)
                     .setMaxDuration(60)
+                    .setMaxSize(100)
                     .setDestinationFile(getDestinationFile())
         }
 
@@ -54,9 +56,10 @@ class TrimmerActivity : AppCompatActivity(), OnTrimVideoListener, OnVideoListene
     }
 
     override fun getResult(file: File) {
+        Toast.makeText(this, "Done", Toast.LENGTH_SHORT).show()
         RunOnUiThread(this).safely {
             val uri = Uri.fromFile(file)
-            Toast.makeText(this, "Video saved at ${uri.path}", Toast.LENGTH_SHORT).show()
+            Log.i("VIDEO TRIMMER", "Video saved at ${uri.path}")
 
             progressDialog.dismiss()
             val mediaMetadataRetriever = MediaMetadataRetriever()
@@ -71,9 +74,9 @@ class TrimmerActivity : AppCompatActivity(), OnTrimVideoListener, OnVideoListene
             values.put(MediaStore.Video.VideoColumns.HEIGHT, height)
             try {
                 val id = contentResolver.insert(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, values)?.let { ContentUris.parseId(it) }
-                Log.e("VIDEO ID", id.toString())
+                Log.e("VIDEO TRIMMER", "ID: $id")
             } catch (e: Exception) {
-                Log.e("Video ID:", "Error trying to insert file: ${file.absoluteFile}")
+                Log.e("VIDEO TRIMMER", "Error trying to insert file: ${file.absoluteFile}")
             }
         }
     }
@@ -86,17 +89,16 @@ class TrimmerActivity : AppCompatActivity(), OnTrimVideoListener, OnVideoListene
     }
 
     override fun onError(message: String) {
-        Log.e("ERROR", message)
+        progressDialog.dismiss()
+        Log.e("VIDEO TRIMMER", message)
     }
 
     override fun onInfo(info: String) {
-        Toast.makeText(this, info, Toast.LENGTH_LONG).show()
+        Log.i("VIDEO TRIMMER", info)
     }
 
     override fun onVideoPrepared() {
-        RunOnUiThread(this).safely {
-            Toast.makeText(this, "onVideoPrepared", Toast.LENGTH_SHORT).show()
-        }
+        Log.e("VIDEO TRIMMER", "onVideoPrepared")
     }
 
     lateinit var doThis: () -> Unit
