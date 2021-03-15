@@ -56,17 +56,5 @@ class Thumb private constructor() {
         fun getWidthBitmap(thumbs: List<Thumb>): Int = thumbs[0].widthBitmap
 
         fun getHeightBitmap(thumbs: List<Thumb>): Int = thumbs[0].heightBitmap
-
-        fun drawableToBitmap(drawable: Drawable): Bitmap {
-            if (drawable is BitmapDrawable && drawable.bitmap != null) return drawable.bitmap
-            val bitmap = if (drawable.intrinsicWidth <= 0 || drawable.intrinsicHeight <= 0) Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888)
-            else Bitmap.createBitmap(drawable.intrinsicWidth, drawable.intrinsicHeight, Bitmap.Config.ARGB_8888)
-            if (bitmap != null) {
-                val canvas = Canvas(bitmap)
-                drawable.setBounds(0, 0, canvas.width, canvas.height)
-                drawable.draw(canvas)
-            }
-            return bitmap
-        }
     }
 }

@@ -5,42 +5,37 @@ import android.graphics.Typeface
 import android.media.MediaExtractor
 import android.media.MediaFormat
 import android.media.MediaMetadataRetriever
-import android.media.MediaPlayer
 import android.net.Uri
 import android.os.Environment
 import android.os.Handler
 import android.os.Message
 import android.os.ParcelFileDescriptor
-import android.provider.DocumentsContract
 import android.util.AttributeSet
 import android.util.Log
-import android.view.GestureDetector
 import android.view.LayoutInflater
-import android.view.MotionEvent
 import android.view.View
 import android.widget.FrameLayout
 import android.widget.SeekBar
+import com.google.android.exoplayer2.ExoPlaybackException
+import com.google.android.exoplayer2.MediaItem
+import com.google.android.exoplayer2.Player
+import com.google.android.exoplayer2.SimpleExoPlayer
 import com.video.trimmer.R
 import com.video.trimmer.interfaces.OnProgressVideoListener
 import com.video.trimmer.interfaces.OnRangeSeekBarListener
 import com.video.trimmer.interfaces.OnTrimVideoListener
 import com.video.trimmer.interfaces.OnVideoListener
 import com.video.trimmer.utils.*
-import kotlinx.android.synthetic.main.view_trimmer.view.handlerTop
-import kotlinx.android.synthetic.main.view_trimmer.view.icon_video_play
-import kotlinx.android.synthetic.main.view_trimmer.view.layout_surface_view
-import kotlinx.android.synthetic.main.view_trimmer.view.textTimeSelection
-import kotlinx.android.synthetic.main.view_trimmer.view.timeFrame
-import kotlinx.android.synthetic.main.view_trimmer.view.timeLineBar
-import kotlinx.android.synthetic.main.view_trimmer.view.timeLineView
-import kotlinx.android.synthetic.main.view_trimmer.view.video_loader
+import kotlinx.android.synthetic.main.view_trimmer.view.*
 import java.io.File
 import java.io.FileNotFoundException
-import java.io.InputStream
 import java.lang.ref.WeakReference
 import java.util.*
 
 class VideoTrimmer @JvmOverloads constructor(context: Context, attrs: AttributeSet, defStyleAttr: Int = 0) : FrameLayout(context, attrs, defStyleAttr) {
+
+    private lateinit var player: SimpleExoPlayer
+    private var firstTimeLoad = true
 
     private lateinit var mSrc: Uri
     private var mFinalPath: String? = null
@@ -81,6 +76,7 @@ class VideoTrimmer @JvmOverloads constructor(context: Context, attrs: AttributeS
 
     private fun init(context: Context) {
         LayoutInflater.from(context).inflate(R.layout.view_trimmer, this, true)
+        initializePlayer()
         setUpListeners()
         setUpMargins()
     }
@@ -93,22 +89,40 @@ class VideoTrimmer @JvmOverloads constructor(context: Context, attrs: AttributeS
             }
         })
 
-        val gestureDetector = GestureDetector(context, object : GestureDetector.SimpleOnGestureListener() {
-            override fun onSingleTapConfirmed(e: MotionEvent): Boolean {
-                onClickVideoPlayPause()
-                return true
+
+        player.addListener(object : Player.EventListener {
+
+            override fun onPlayerError(error: ExoPlaybackException) {
+                super.onPlayerError(error)
+                mOnTrimVideoListener?.onError("Something went wrong reason : $error")
+            }
+
+            override fun onPlaybackStateChanged(state: Int) {
+                super.onPlaybackStateChanged(state)
+
+                if(state == Player.STATE_READY && firstTimeLoad) {
+                    onVideoPrepared()
+                    firstTimeLoad = false
+                    playVideo()
+                }
+
+                else if (state == Player.STATE_ENDED) {
+                    onVideoCompleted()
+                }
             }
         })
 
-        video_loader.setOnErrorListener { _, what, _ ->
-            mOnTrimVideoListener?.onError("Something went wrong reason : $what")
-            false
+        icon_video_play.setOnClickListener {
+            if(player.isPlaying)
+                pauseVideo()
+            else playVideo()
         }
 
-        video_loader.setOnTouchListener { _, event ->
-            gestureDetector.onTouchEvent(event)
-            true
+        video_loader.videoSurfaceView?.setOnClickListener {
+            if(player.isPlaying)
+                pauseVideo()
         }
+
 
         handlerTop.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar, progress: Int, fromUser: Boolean) {
@@ -140,9 +154,12 @@ class VideoTrimmer @JvmOverloads constructor(context: Context, attrs: AttributeS
                 onStopSeekThumbs()
             }
         })
+    }
 
-        video_loader.setOnPreparedListener { mp -> onVideoPrepared(mp) }
-        video_loader.setOnCompletionListener { onVideoCompleted() }
+    private fun initializePlayer() {
+        player = SimpleExoPlayer.Builder(context).build()
+        video_loader.player = player
+        player.prepare()
     }
 
     private fun onPlayerIndicatorSeekChanged(progress: Int, fromUser: Boolean) {
@@ -155,18 +172,18 @@ class VideoTrimmer @JvmOverloads constructor(context: Context, attrs: AttributeS
 
     private fun onPlayerIndicatorSeekStart() {
         mMessageHandler.removeMessages(SHOW_PROGRESS)
-        video_loader.pause()
+        player.pause()
         icon_video_play.visibility = View.VISIBLE
         notifyProgressUpdate(false)
     }
 
     private fun onPlayerIndicatorSeekStop(seekBar: SeekBar) {
         mMessageHandler.removeMessages(SHOW_PROGRESS)
-        video_loader.pause()
+        player.pause()
         icon_video_play.visibility = View.VISIBLE
 
         val duration = (mDuration * seekBar.progress / 1000L).toInt()
-        video_loader.seekTo(duration)
+        player.seekTo(duration.toLong())
         notifyProgressUpdate(false)
     }
 
@@ -183,7 +200,7 @@ class VideoTrimmer @JvmOverloads constructor(context: Context, attrs: AttributeS
 
     fun onSaveClicked() {
         icon_video_play.visibility = View.VISIBLE
-        video_loader.pause()
+        player.pause()
 
         val mediaMetadataRetriever = MediaMetadataRetriever()
         mediaMetadataRetriever.setDataSource(context, mSrc)
@@ -252,53 +269,48 @@ class VideoTrimmer @JvmOverloads constructor(context: Context, attrs: AttributeS
         }
     }
 
-    private fun onClickVideoPlayPause() {
-        if (video_loader.isPlaying) {
-            icon_video_play.visibility = View.VISIBLE
-            mMessageHandler.removeMessages(SHOW_PROGRESS)
-            video_loader.pause()
-        } else {
-            icon_video_play.visibility = View.GONE
-            if (mResetSeekBar) {
-                mResetSeekBar = false
-                video_loader.seekTo(mStartPosition.toInt())
-            }
-            mMessageHandler.sendEmptyMessage(SHOW_PROGRESS)
-            video_loader.start()
+    private fun pauseVideo () {
+        icon_video_play.visibility = View.VISIBLE
+        mMessageHandler.removeMessages(SHOW_PROGRESS)
+        player.pause()
+    }
+
+    private fun playVideo () {
+        icon_video_play.visibility = View.GONE
+        if(mResetSeekBar) {
+            mResetSeekBar = false
+            player.seekTo(mStartPosition.toLong())
         }
+        mMessageHandler.sendEmptyMessage(SHOW_PROGRESS)
+        player.playWhenReady = true
     }
 
     fun onCancelClicked() {
-        video_loader.stopPlayback()
-        mOnTrimVideoListener?.cancelAction()
+        //video_loader.stopPlayback()
+        //mOnTrimVideoListener?.cancelAction()
     }
 
-    private fun onVideoPrepared(mp: MediaPlayer) {
-        val videoWidth = mp.videoWidth
-        val videoHeight = mp.videoHeight
-        val videoProportion = videoWidth.toFloat() / videoHeight.toFloat()
-        val screenWidth = layout_surface_view.width
-        val screenHeight = layout_surface_view.height
-        val screenProportion = screenWidth.toFloat() / screenHeight.toFloat()
-        val lp = video_loader.layoutParams
+    private fun onVideoPrepared() {
+        //val videoWidth = mp.videoWidth
+        //val videoHeight = mp.videoHeight
+        //val videoProportion = videoWidth.toFloat() / videoHeight.toFloat()
+//        val screenWidth = layout_surface_view.width
+//        val screenHeight = layout_surface_view.height
+//        val screenProportion = screenWidth.toFloat() / screenHeight.toFloat()
+//        val lp = video_loader.layoutParams
+//
+//        if (videoProportion > screenProportion) {
+//            lp.width = screenWidth
+//            lp.height = (screenWidth.toFloat() / videoProportion).toInt()
+//        } else {
+//            lp.width = (videoProportion * screenHeight.toFloat()).toInt()
+//            lp.height = screenHeight
+//        }
+//        video_loader.layoutParams = lp
 
-        if (videoProportion > screenProportion) {
-            lp.width = screenWidth
-            lp.height = (screenWidth.toFloat() / videoProportion).toInt()
-        } else {
-            lp.width = (videoProportion * screenHeight.toFloat()).toInt()
-            lp.height = screenHeight
-        }
-        video_loader.layoutParams = lp
-
-        icon_video_play.visibility = View.VISIBLE
-
-        mDuration = video_loader.duration.toFloat()
+        mDuration = player.duration.toFloat()
         setSeekBarPosition()
-
         setTimeFrames()
-
-        mOnVideoListener?.onVideoPrepared()
     }
 
     private fun setSeekBarPosition() {
@@ -320,7 +332,7 @@ class VideoTrimmer @JvmOverloads constructor(context: Context, attrs: AttributeS
                 mEndPosition = mDuration
             }
         }
-        video_loader.seekTo(mStartPosition.toInt())
+        player.seekTo(mStartPosition.toLong())
         mTimeVideo = mDuration
         timeLineBar.initMaxWidth()
     }
@@ -338,7 +350,7 @@ class VideoTrimmer @JvmOverloads constructor(context: Context, attrs: AttributeS
                     val offset = mEndPosition - mStartPosition - mMaxDuration
                     mEndPosition -= offset
                 }
-                video_loader.seekTo(mStartPosition.toInt())
+                player.seekTo(mStartPosition.toLong())
             }
             Thumb.RIGHT -> {
                 mEndPosition = (mDuration * value / 100L)
@@ -354,17 +366,17 @@ class VideoTrimmer @JvmOverloads constructor(context: Context, attrs: AttributeS
 
     private fun onStopSeekThumbs() {
         mMessageHandler.removeMessages(SHOW_PROGRESS)
-        video_loader.pause()
+        player.pause()
         icon_video_play.visibility = View.VISIBLE
     }
 
     private fun onVideoCompleted() {
-        video_loader.seekTo(mStartPosition.toInt())
+        player.seekTo(mStartPosition.toLong())
     }
 
     private fun notifyProgressUpdate(all: Boolean) {
         if (mDuration == 0f) return
-        val position = video_loader.currentPosition
+        val position = player.currentPosition
         if (all) {
             for (item in mListeners) {
                 item.updateProgress(position.toFloat(), mDuration, (position * 100 / mDuration))
@@ -380,7 +392,7 @@ class VideoTrimmer @JvmOverloads constructor(context: Context, attrs: AttributeS
         else handlerTop.visibility = View.VISIBLE
         if (time >= mEndPosition) {
             mMessageHandler.removeMessages(SHOW_PROGRESS)
-            video_loader.pause()
+            player.pause()
             icon_video_play.visibility = View.VISIBLE
             mResetSeekBar = true
             return
@@ -434,7 +446,7 @@ class VideoTrimmer @JvmOverloads constructor(context: Context, attrs: AttributeS
 
     fun setVideoURI(videoURI: Uri): VideoTrimmer {
         mSrc = videoURI
-        video_loader.setVideoURI(mSrc)
+        player.setMediaItem(MediaItem.fromUri(mSrc))
         video_loader.requestFocus()
         timeLineView.setVideo(mSrc)
         return this
@@ -451,7 +463,7 @@ class VideoTrimmer @JvmOverloads constructor(context: Context, attrs: AttributeS
             val view = mView.get()
             if (view == null || view.video_loader == null) return
             view.notifyProgressUpdate(true)
-            if (view.video_loader.isPlaying) sendEmptyMessageDelayed(0, 10)
+            if (view.video_loader.player?.isPlaying!!) sendEmptyMessageDelayed(0, 10)
         }
     }
 

@@ -14,7 +14,7 @@ class VideoOptions {
         // crop: arrayOf("-i", inputPath, "-filter:v", "crop=$width:$height:$x:$y", "-threads", "5", "-preset", "ultrafast", "-strict", "-2", "-c:a", "copy", outputPath)
 
         try {
-            var rc = FFmpeg.execute("-y -noaccurate_seek -ss $startPosition -i \"$inputPath\" -to $endPosition -c copy $outputPath -avoid_negative_ts make_zero")
+            var rc = FFmpeg.execute("-y -noaccurate_seek -ss $startPosition -to $endPosition -i $inputPath -c copy $outputPath -avoid_negative_ts make_zero")
             deleteFiles(inputPath)
 
 
