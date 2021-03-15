@@ -52,9 +52,11 @@ class TimeLineView @JvmOverloads constructor(context: Context, attrs: AttributeS
                     val frameHeight = mHeightView
                     val initialBitmap = mediaMetadataRetriever.getFrameAtTime(0, MediaMetadataRetriever.OPTION_CLOSEST_SYNC)
                     val frameWidth = ((initialBitmap!!.width.toFloat() / initialBitmap.height.toFloat()) * frameHeight.toFloat()).toInt()
-                    var numThumbs = ceil((viewWidth.toFloat() / frameWidth)).toInt()
-                    if (numThumbs < threshold) numThumbs = threshold
-                    val cropWidth = viewWidth / threshold
+//                    var numThumbs = ceil((viewWidth.toFloat() / frameWidth)).toInt()
+                    var numThumbs = 6
+//                    if (numThumbs < threshold) numThumbs = threshold
+                    //val cropWidth = viewWidth / threshold
+                    var cropWidth = viewWidth/numThumbs
                     val interval = videoLengthInMs / numThumbs
                     for (i in 0 until numThumbs) {
                         var bitmap = mediaMetadataRetriever.getFrameAtTime(i * interval, MediaMetadataRetriever.OPTION_CLOSEST_SYNC)
@@ -63,7 +65,7 @@ class TimeLineView @JvmOverloads constructor(context: Context, attrs: AttributeS
                                 bitmap = Bitmap.createScaledBitmap(bitmap, frameWidth, frameHeight, false)
                                 bitmap = Bitmap.createBitmap(bitmap, 0, 0, cropWidth, bitmap.height)
                             } catch (e: Exception) {
-                                //e.printStackTrace()
+                                e.printStackTrace()
                             }
                             thumbnailList.put(i.toLong(), bitmap)
                         }
