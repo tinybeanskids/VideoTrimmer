@@ -471,6 +471,12 @@ class VideoTrimmer @JvmOverloads constructor(context: Context, attrs: AttributeS
         return this
     }
 
+    fun releasePlayer() {
+        player.stop()
+        player.release()
+    }
+
+
     private class MessageHandler internal constructor(view: VideoTrimmer) : Handler() {
         private val mView: WeakReference<VideoTrimmer> = WeakReference(view)
         override fun handleMessage(msg: Message) {

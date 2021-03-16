@@ -51,6 +51,11 @@ class TrimmerActivity : AppCompatActivity(), OnTrimVideoListener, OnVideoListene
         }
     }
 
+    override fun onDestroy() {
+        videoTrimmer.releasePlayer()
+        super.onDestroy()
+    }
+
     private fun getDestinationFile(): File {
         return File.createTempFile("temp-video", ".mp4", this.cacheDir)
     }
