@@ -51,7 +51,7 @@ class TimeLineView @JvmOverloads constructor(context: Context, attrs: AttributeS
                     val videoLengthInMs = (Integer.parseInt(mediaMetadataRetriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)) * 1000).toLong()
                     val frameHeight = mHeightView
                     val initialBitmap = mediaMetadataRetriever.getFrameAtTime(0, MediaMetadataRetriever.OPTION_CLOSEST_SYNC)
-                    val frameWidth = ((initialBitmap!!.width.toFloat() / initialBitmap.height.toFloat()) * frameHeight.toFloat()).toInt()
+                    val frameWidth = width/ 6
 //                    var numThumbs = ceil((viewWidth.toFloat() / frameWidth)).toInt()
                     var numThumbs = 6
 //                    if (numThumbs < threshold) numThumbs = threshold
