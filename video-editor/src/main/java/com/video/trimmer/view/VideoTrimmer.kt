@@ -11,15 +11,20 @@ import android.os.Handler
 import android.os.Message
 import android.os.ParcelFileDescriptor
 import android.util.AttributeSet
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.widget.FrameLayout
 import android.widget.SeekBar
 import com.google.android.exoplayer2.ExoPlaybackException
-import com.google.android.exoplayer2.MediaItem
+import com.google.android.exoplayer2.ExoPlayerFactory
 import com.google.android.exoplayer2.Player
 import com.google.android.exoplayer2.SimpleExoPlayer
+import com.google.android.exoplayer2.source.ExtractorMediaSource
+import com.google.android.exoplayer2.trackselection.AdaptiveTrackSelection
+import com.google.android.exoplayer2.trackselection.DefaultTrackSelector
+import com.google.android.exoplayer2.trackselection.TrackSelector
+import com.google.android.exoplayer2.upstream.DefaultDataSourceFactory
+import com.google.android.exoplayer2.util.Util
 import com.video.trimmer.R
 import com.video.trimmer.interfaces.OnProgressVideoListener
 import com.video.trimmer.interfaces.OnRangeSeekBarListener
@@ -97,29 +102,29 @@ class VideoTrimmer @JvmOverloads constructor(context: Context, attrs: AttributeS
                 mOnTrimVideoListener?.onError("Something went wrong reason : $error")
             }
 
-            override fun onPlaybackStateChanged(state: Int) {
-                super.onPlaybackStateChanged(state)
+            override fun onPlayerStateChanged(playWhenReady: Boolean, playbackState: Int) {
+                super.onPlayerStateChanged(playWhenReady, playbackState)
 
-                if(state == Player.STATE_READY && firstTimeLoad) {
+                if (playbackState == Player.STATE_READY && firstTimeLoad) {
                     onVideoPrepared()
                     firstTimeLoad = false
                     playVideo()
-                }
-
-                else if (state == Player.STATE_ENDED) {
+                } else if (playbackState == Player.STATE_ENDED) {
                     onVideoCompleted()
                 }
+
             }
+
         })
 
         icon_video_play.setOnClickListener {
-            if(player.isPlaying)
+            if(player.isPlaying())
                 pauseVideo()
             else playVideo()
         }
 
         video_loader.videoSurfaceView?.setOnClickListener {
-            if(player.isPlaying)
+            if(player.isPlaying())
                 pauseVideo()
         }
 
@@ -157,9 +162,11 @@ class VideoTrimmer @JvmOverloads constructor(context: Context, attrs: AttributeS
     }
 
     private fun initializePlayer() {
-        player = SimpleExoPlayer.Builder(context).build()
+        val trackSelector: TrackSelector =
+                DefaultTrackSelector(AdaptiveTrackSelection.Factory())
+
+        player = ExoPlayerFactory.newSimpleInstance(context, trackSelector)
         video_loader.player = player
-        player.prepare()
     }
 
     private fun onPlayerIndicatorSeekChanged(progress: Int, fromUser: Boolean) {
@@ -172,14 +179,14 @@ class VideoTrimmer @JvmOverloads constructor(context: Context, attrs: AttributeS
 
     private fun onPlayerIndicatorSeekStart() {
         mMessageHandler.removeMessages(SHOW_PROGRESS)
-        player.pause()
+        player.playWhenReady = false
         icon_video_play.visibility = View.VISIBLE
         notifyProgressUpdate(false)
     }
 
     private fun onPlayerIndicatorSeekStop(seekBar: SeekBar) {
         mMessageHandler.removeMessages(SHOW_PROGRESS)
-        player.pause()
+        player.playWhenReady = false
         icon_video_play.visibility = View.VISIBLE
 
         val duration = (mDuration * seekBar.progress / 1000L).toInt()
@@ -200,7 +207,7 @@ class VideoTrimmer @JvmOverloads constructor(context: Context, attrs: AttributeS
 
     fun onSaveClicked() {
         icon_video_play.visibility = View.VISIBLE
-        player.pause()
+        player.playWhenReady = false
 
         val mediaMetadataRetriever = MediaMetadataRetriever()
         mediaMetadataRetriever.setDataSource(context, mSrc)
@@ -272,7 +279,7 @@ class VideoTrimmer @JvmOverloads constructor(context: Context, attrs: AttributeS
     private fun pauseVideo () {
         icon_video_play.visibility = View.VISIBLE
         mMessageHandler.removeMessages(SHOW_PROGRESS)
-        player.pause()
+        player.playWhenReady = false
     }
 
     private fun playVideo () {
@@ -366,7 +373,7 @@ class VideoTrimmer @JvmOverloads constructor(context: Context, attrs: AttributeS
 
     private fun onStopSeekThumbs() {
         mMessageHandler.removeMessages(SHOW_PROGRESS)
-        player.pause()
+        player.playWhenReady = false
         icon_video_play.visibility = View.VISIBLE
     }
 
@@ -392,7 +399,7 @@ class VideoTrimmer @JvmOverloads constructor(context: Context, attrs: AttributeS
         else handlerTop.visibility = View.VISIBLE
         if (time >= mEndPosition) {
             mMessageHandler.removeMessages(SHOW_PROGRESS)
-            player.pause()
+            player.playWhenReady = false
             icon_video_play.visibility = View.VISIBLE
             mResetSeekBar = true
             return
@@ -446,7 +453,14 @@ class VideoTrimmer @JvmOverloads constructor(context: Context, attrs: AttributeS
 
     fun setVideoURI(videoURI: Uri): VideoTrimmer {
         mSrc = videoURI
-        player.setMediaItem(MediaItem.fromUri(mSrc))
+        val dataSourceFactory = DefaultDataSourceFactory(context,
+                Util.getUserAgent(context, context.applicationInfo.name))
+
+        val mediaSource = ExtractorMediaSource
+                .Factory(dataSourceFactory)
+                .createMediaSource(mSrc)
+
+        player.prepare(mediaSource)
         video_loader.requestFocus()
         timeLineView.setVideo(mSrc)
         return this
@@ -463,7 +477,9 @@ class VideoTrimmer @JvmOverloads constructor(context: Context, attrs: AttributeS
             val view = mView.get()
             if (view == null || view.video_loader == null) return
             view.notifyProgressUpdate(true)
-            if (view.video_loader.player?.isPlaying!!) sendEmptyMessageDelayed(0, 10)
+            if (view.video_loader.player.playbackState == Player.STATE_READY
+                    && view.video_loader.player.playWhenReady)
+                sendEmptyMessageDelayed(0, 10)
         }
     }
 
