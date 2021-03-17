@@ -77,18 +77,20 @@
         android:id="@+id/timeLineFrame"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_marginStart="@dimen/_16sdp"
+        android:layout_marginEnd="@dimen/_16sdp"
         android:layout_below="@+id/timeFrame"
         >
 
       <FrameLayout
           android:layout_width="match_parent"
           android:layout_height="wrap_content"
-          android:background="@android:color/black">
+          android:background="#2f3031">
 
         <com.video.trimmer.view.TimeLineView
             android:id="@+id/timeLineView"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content" />
+            android:layout_height="wrap_content"/>
 
       </FrameLayout>
 
@@ -96,10 +98,6 @@
           android:id="@+id/handlerTop"
           android:layout_width="match_parent"
           android:layout_height="wrap_content"
-          android:layout_gravity="center_vertical"
-          android:layout_marginStart="@dimen/_12sdp"
-          android:layout_marginEnd="@dimen/_12sdp"
-          android:layout_marginBottom="@dimen/_4sdp"
           android:max="1000"
           android:progressDrawable="@android:color/transparent"
           android:secondaryProgress="0"
