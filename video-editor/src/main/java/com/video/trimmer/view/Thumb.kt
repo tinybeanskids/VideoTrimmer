@@ -1,13 +1,13 @@
 package com.video.trimmer.view
 
-import android.content.res.Resources
+import android.content.Context
 import android.graphics.Bitmap
-import android.graphics.BitmapFactory
-import android.graphics.Canvas
-import android.graphics.drawable.BitmapDrawable
-import android.graphics.drawable.Drawable
+import androidx.core.content.ContextCompat
+import androidx.core.graphics.drawable.toBitmap
 import com.video.trimmer.R
+import com.video.trimmer.utils.convertDpToPixel
 import java.util.*
+
 
 class Thumb private constructor() {
 
@@ -36,17 +36,18 @@ class Thumb private constructor() {
         const val LEFT = 0
         const val RIGHT = 1
 
-        fun initThumbs(resources: Resources): List<Thumb> {
+        fun initThumbs(context: Context): List<Thumb> {
             val thumbs = Vector<Thumb>()
             for (i in 0..1) {
                 val th = Thumb()
                 th.index = i
                 if (i == 0) {
-                    val resImageLeft = R.drawable.seek_left_handle_sunrise_white
-                    th.bitmap = BitmapFactory.decodeResource(resources, resImageLeft)
+                    val resImageLeft = ContextCompat.getDrawable(context, R.drawable.thumb)
+                    th.bitmap = resImageLeft?.toBitmap(th.convertDpToPixel(10f,context).toInt(), th.convertDpToPixel(40f,context).toInt(), null)
                 } else {
-                    val resImageRight = R.drawable.seek_right_handle_sunrise_white
-                    th.bitmap = BitmapFactory.decodeResource(resources, resImageRight)
+
+                    val resImageRight = ContextCompat.getDrawable(context, R.drawable.thumb)
+                    th.bitmap = resImageRight?.toBitmap(th.convertDpToPixel(10f,context).toInt(), th.convertDpToPixel(40f,context).toInt(), null)
                 }
                 thumbs.add(th)
             }
@@ -56,5 +57,8 @@ class Thumb private constructor() {
         fun getWidthBitmap(thumbs: List<Thumb>): Int = thumbs[0].widthBitmap
 
         fun getHeightBitmap(thumbs: List<Thumb>): Int = thumbs[0].heightBitmap
+
     }
+
+
 }
