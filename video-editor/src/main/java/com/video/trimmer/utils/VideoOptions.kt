@@ -12,9 +12,9 @@ class VideoOptions {
     fun trimVideoFromMemory(startPosition: String, endPosition: String, inputPath: String, outputPath: String, file: File, listener: OnTrimVideoListener?, maxSize: Int) {
         // compress: arrayOf("-i", inputPath, "-vf", "scale=$width:$height", outputPath) //iw:ih
         // crop: arrayOf("-i", inputPath, "-filter:v", "crop=$width:$height:$x:$y", "-threads", "5", "-preset", "ultrafast", "-strict", "-2", "-c:a", "copy", outputPath)
-
         try {
             var rc = FFmpeg.execute("-y -noaccurate_seek -ss $startPosition -to $endPosition -i $inputPath -c copy $outputPath -avoid_negative_ts make_zero")
+
             deleteFiles(inputPath)
 
 
