@@ -36,8 +36,6 @@ class TrimmerActivity : AppCompatActivity(), OnTrimVideoListener, OnVideoListene
                     .setOnVideoListener(this)
                     .setVideoURI(Uri.parse(path))
                     .setVideoInformationVisibility(true)
-                    .setMaxDuration(60)
-                    .setMaxSize(100)
                     .setDestinationFile(getDestinationFile())
         }
 
@@ -61,8 +59,8 @@ class TrimmerActivity : AppCompatActivity(), OnTrimVideoListener, OnVideoListene
     }
 
     override fun getResult(file: File) {
-        Toast.makeText(this, "Done", Toast.LENGTH_SHORT).show()
         RunOnUiThread(this).safely {
+            Toast.makeText(this, "Done", Toast.LENGTH_SHORT).show()
             val uri = Uri.fromFile(file)
             Log.i("VIDEO TRIMMER", "Video saved at ${uri.path}")
 
