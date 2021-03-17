@@ -6,10 +6,7 @@ import android.media.MediaExtractor
 import android.media.MediaFormat
 import android.media.MediaMetadataRetriever
 import android.net.Uri
-import android.os.Environment
-import android.os.Handler
-import android.os.Message
-import android.os.ParcelFileDescriptor
+import android.os.*
 import android.util.AttributeSet
 import android.view.LayoutInflater
 import android.view.View

@@ -37,7 +37,7 @@ class RangeSeekBarView @JvmOverloads constructor(context: Context, attrs: Attrib
     }
 
     private fun init() {
-        thumbs = Thumb.initThumbs(resources)
+        thumbs = Thumb.initThumbs(context)
         mThumbWidth = Thumb.getWidthBitmap(thumbs).toFloat()
         mThumbHeight = Thumb.getHeightBitmap(thumbs).toFloat()
 
