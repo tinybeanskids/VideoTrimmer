@@ -6,10 +6,7 @@ import android.media.MediaExtractor
 import android.media.MediaFormat
 import android.media.MediaMetadataRetriever
 import android.net.Uri
-import android.os.Environment
-import android.os.Handler
-import android.os.Message
-import android.os.ParcelFileDescriptor
+import android.os.*
 import android.util.AttributeSet
 import android.view.LayoutInflater
 import android.view.View
@@ -164,8 +161,7 @@ class VideoTrimmer @JvmOverloads constructor(context: Context, attrs: AttributeS
     private fun initializePlayer() {
         val trackSelector: TrackSelector =
             DefaultTrackSelector(AdaptiveTrackSelection.Factory())
-
-        player = SimpleExoPlayer.Builder(context).setTrackSelector(trackSelector).build()
+        player = SimpleExoPlayer.Builder(context).setLooper(context.mainLooper).setTrackSelector(trackSelector).build()
         video_loader.player = player
     }
 
@@ -207,10 +203,10 @@ class VideoTrimmer @JvmOverloads constructor(context: Context, attrs: AttributeS
 
     fun onSaveClicked() {
         icon_video_play.visibility = View.VISIBLE
+        player.playWhenReady = false
         BackgroundExecutor.execute(object : BackgroundExecutor.Task("", 0L, "") {
             override fun execute() {
                 try {
-                    player.playWhenReady = false
                     val mediaMetadataRetriever = MediaMetadataRetriever()
                     mediaMetadataRetriever.setDataSource(context, mSrc)
                     val metaDataKeyDuration =
