@@ -6,17 +6,19 @@ import android.media.MediaExtractor
 import android.media.MediaFormat
 import android.media.MediaMetadataRetriever
 import android.net.Uri
-import android.os.*
+import android.os.Environment
+import android.os.Handler
+import android.os.Message
+import android.os.ParcelFileDescriptor
 import android.util.AttributeSet
 import android.view.LayoutInflater
 import android.view.View
 import android.widget.FrameLayout
 import android.widget.SeekBar
 import com.google.android.exoplayer2.ExoPlaybackException
-import com.google.android.exoplayer2.ExoPlayerFactory
 import com.google.android.exoplayer2.Player
 import com.google.android.exoplayer2.SimpleExoPlayer
-import com.google.android.exoplayer2.source.ExtractorMediaSource
+import com.google.android.exoplayer2.source.ProgressiveMediaSource
 import com.google.android.exoplayer2.trackselection.AdaptiveTrackSelection
 import com.google.android.exoplayer2.trackselection.DefaultTrackSelector
 import com.google.android.exoplayer2.trackselection.TrackSelector
@@ -34,7 +36,8 @@ import java.io.FileNotFoundException
 import java.lang.ref.WeakReference
 import java.util.*
 
-class VideoTrimmer @JvmOverloads constructor(context: Context, attrs: AttributeSet, defStyleAttr: Int = 0) : FrameLayout(context, attrs, defStyleAttr) {
+class VideoTrimmer @JvmOverloads constructor(context: Context, attrs: AttributeSet, defStyleAttr: Int = 0) :
+    FrameLayout(context, attrs, defStyleAttr) {
 
     private lateinit var player: SimpleExoPlayer
     private var firstTimeLoad = true
@@ -160,9 +163,9 @@ class VideoTrimmer @JvmOverloads constructor(context: Context, attrs: AttributeS
 
     private fun initializePlayer() {
         val trackSelector: TrackSelector =
-                DefaultTrackSelector(AdaptiveTrackSelection.Factory())
+            DefaultTrackSelector(AdaptiveTrackSelection.Factory())
 
-        player = ExoPlayerFactory.newSimpleInstance(context, trackSelector)
+        player = SimpleExoPlayer.Builder(context).setTrackSelector(trackSelector).build()
         video_loader.player = player
     }
 
@@ -210,7 +213,8 @@ class VideoTrimmer @JvmOverloads constructor(context: Context, attrs: AttributeS
                     player.playWhenReady = false
                     val mediaMetadataRetriever = MediaMetadataRetriever()
                     mediaMetadataRetriever.setDataSource(context, mSrc)
-                    val metaDataKeyDuration = java.lang.Long.parseLong(mediaMetadataRetriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION))
+                    val metaDataKeyDuration =
+                        java.lang.Long.parseLong(mediaMetadataRetriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION))
 
                     if (mTimeVideo < MIN_TIME_FRAME) {
                         if (metaDataKeyDuration - mEndPosition > MIN_TIME_FRAME - mTimeVideo) mEndPosition += MIN_TIME_FRAME - mTimeVideo
@@ -219,7 +223,7 @@ class VideoTrimmer @JvmOverloads constructor(context: Context, attrs: AttributeS
 
                     val outputFileUri = Uri.fromFile(destinationFile)
                     val outPutPath = RealPathUtil.realPathFromUriApi19(context, outputFileUri)
-                            ?: destinationFile.absolutePath
+                        ?: destinationFile.absolutePath
                     mOnTrimVideoListener?.onInfo("SOURCE ${safUriToFFmpegPath(mSrc)}")
                     mOnTrimVideoListener?.onInfo("DESTINATION $outPutPath")
                     val extractor = MediaExtractor()
@@ -242,7 +246,8 @@ class VideoTrimmer @JvmOverloads constructor(context: Context, attrs: AttributeS
                         extractor.release()
                     }
 
-                    val duration = java.lang.Long.parseLong(mediaMetadataRetriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION))
+                    val duration =
+                        java.lang.Long.parseLong(mediaMetadataRetriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION))
                     mOnTrimVideoListener?.onInfo("FRAME RATE $frameRate")
                     mOnTrimVideoListener?.onInfo("FRAME COUNT ${(duration / 1000 * frameRate)}")
 
@@ -255,14 +260,15 @@ class VideoTrimmer @JvmOverloads constructor(context: Context, attrs: AttributeS
                     //trim
 
                     VideoOptions().trimVideoFromMemory(
-                            TrimVideoUtils.stringForTime(mStartPosition),
-                            TrimVideoUtils.stringForTime(mEndPosition),
-                            inputCopy.path,
+                        TrimVideoUtils.stringForTime(mStartPosition),
+                        TrimVideoUtils.stringForTime(mEndPosition),
+                        inputCopy.path,
 //                safUriToFFmpegPath(mSrc), //todo used for android 11 with pipe protocol
-                            outPutPath,
-                            destinationFile,
-                            mOnTrimVideoListener,
-                            mMaxSize)
+                        outPutPath,
+                        destinationFile,
+                        mOnTrimVideoListener,
+                        mMaxSize
+                    )
                 } catch (e: Throwable) {
                     Thread.getDefaultUncaughtExceptionHandler().uncaughtException(Thread.currentThread(), e)
                 }
@@ -354,7 +360,13 @@ class VideoTrimmer @JvmOverloads constructor(context: Context, attrs: AttributeS
 
     private fun setTimeFrames() {
         val seconds = context.getString(R.string.short_seconds)
-        textTimeSelection.text = String.format("%s %s - %s %s", TrimVideoUtils.stringForPreviewTime(mStartPosition), seconds, TrimVideoUtils.stringForPreviewTime(mEndPosition), seconds)
+        textTimeSelection.text = String.format(
+            "%s %s - %s %s",
+            TrimVideoUtils.stringForPreviewTime(mStartPosition),
+            seconds,
+            TrimVideoUtils.stringForPreviewTime(mEndPosition),
+            seconds
+        )
     }
 
     private fun onSeekThumbs(index: Int, value: Float) {
@@ -462,12 +474,14 @@ class VideoTrimmer @JvmOverloads constructor(context: Context, attrs: AttributeS
 
     fun setVideoURI(videoURI: Uri): VideoTrimmer {
         mSrc = videoURI
-        val dataSourceFactory = DefaultDataSourceFactory(context,
-                Util.getUserAgent(context, context.applicationInfo.name))
+        val dataSourceFactory = DefaultDataSourceFactory(
+            context,
+            Util.getUserAgent(context, context.applicationInfo.name)
+        )
 
-        val mediaSource = ExtractorMediaSource
-                .Factory(dataSourceFactory)
-                .createMediaSource(mSrc)
+        val mediaSource = ProgressiveMediaSource
+            .Factory(dataSourceFactory)
+            .createMediaSource(mSrc)
 
         player.prepare(mediaSource)
         video_loader.requestFocus()
@@ -492,8 +506,9 @@ class VideoTrimmer @JvmOverloads constructor(context: Context, attrs: AttributeS
             val view = mView.get()
             if (view == null || view.video_loader == null) return
             view.notifyProgressUpdate(true)
-            if (view.video_loader.player.playbackState == Player.STATE_READY
-                    && view.video_loader.player.playWhenReady)
+            if (view.video_loader.player != null && view.video_loader.player!!.playbackState == Player.STATE_READY
+                && view.video_loader.player!!.playWhenReady
+            )
                 sendEmptyMessageDelayed(0, 10)
         }
     }
