@@ -8,14 +8,22 @@ import android.net.Uri
 import android.util.AttributeSet
 import android.view.View
 import com.video.trimmer.R
-import com.video.trimmer.utils.BackgroundExecutor
+import io.reactivex.rxjava3.core.Observable
+import io.reactivex.rxjava3.disposables.CompositeDisposable
+import io.reactivex.rxjava3.kotlin.addTo
+import io.reactivex.rxjava3.schedulers.Schedulers
 
-class TimeLineView @JvmOverloads constructor(context: Context, attrs: AttributeSet, defStyleAttr: Int = 0) : View(context, attrs, defStyleAttr) {
+class TimeLineView @JvmOverloads constructor(
+    context: Context,
+    attrs: AttributeSet,
+    defStyleAttr: Int = 0
+) : View(context, attrs, defStyleAttr) {
 
     private var mVideoUri: Uri? = null
     private var mHeightView: Int = 0
     private var mBitmapList: MutableList<Bitmap> = mutableListOf()
     private var framesWidthTotal = 0f
+    private val compositeDisposable = CompositeDisposable()
 
     init {
         init()
@@ -39,44 +47,43 @@ class TimeLineView @JvmOverloads constructor(context: Context, attrs: AttributeS
     }
 
     private fun getBitmap(viewWidth: Int) {
-        BackgroundExecutor.execute(object : BackgroundExecutor.Task("", 0L, "") {
-            override fun execute() {
-                try {
-                    val threshold = 11
-                    val mediaMetadataRetriever = MediaMetadataRetriever()
+        Observable.fromCallable {
+            val mediaMetadataRetriever = MediaMetadataRetriever()
 
-                    mediaMetadataRetriever.setDataSource(context, mVideoUri)
-                    val videoLengthInMs = (Integer.parseInt(mediaMetadataRetriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)) * 1000).toLong()
+            mediaMetadataRetriever.setDataSource(context, mVideoUri)
+            val videoLengthInMs = ((
+                    mediaMetadataRetriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION))?.toInt()?.times(1000))?.toLong()
 
-                    val frameHeight = mHeightView
-                    //val initialBitmap = mediaMetadataRetriever.getFrameAtTime(0, MediaMetadataRetriever.OPTION_CLOSEST_SYNC)
+            val frameHeight = mHeightView
 
-                    val frameWidth = width / 6
-//                    var numThumbs = ceil((viewWidth.toFloat() / frameWidth)).toInt()
-                    var numThumbs = 6
-//                    if (numThumbs < threshold) numThumbs = threshold
-                    //val cropWidth = viewWidth / threshold
-                    var cropWidth = viewWidth / numThumbs
-                    val interval = videoLengthInMs / numThumbs
-                    for (i in 0 until numThumbs) {
-                        var bitmap = mediaMetadataRetriever.getFrameAtTime(i * interval, MediaMetadataRetriever.OPTION_CLOSEST_SYNC)
-                        if (bitmap != null) {
-                            try {
-                                bitmap = Bitmap.createScaledBitmap(bitmap, frameWidth, frameHeight, false)
-                                bitmap = Bitmap.createBitmap(bitmap, 0, 0, cropWidth, bitmap.height)
-                                mBitmapList.add(bitmap)
-                                invalidate()
-                            } catch (e: Exception) {
-                                e.printStackTrace()
-                            }
+            val frameWidth = width / 6
+            var numThumbs = 6
+            var cropWidth = viewWidth / numThumbs
+            val interval = videoLengthInMs?.let { it / numThumbs }
+            for (i in 0 until numThumbs) {
+                interval?.let {
+                    var bitmap = mediaMetadataRetriever.getFrameAtTime(
+                        i * interval,
+                        MediaMetadataRetriever.OPTION_CLOSEST_SYNC
+                    )
+                    if (bitmap != null) {
+                        try {
+                            bitmap = Bitmap.createScaledBitmap(bitmap, frameWidth, frameHeight, false)
+                            bitmap = Bitmap.createBitmap(bitmap, 0, 0, cropWidth, bitmap.height)
+                            mBitmapList.add(bitmap)
+                            invalidate()
+                        } catch (e: Exception) {
+                            e.printStackTrace()
                         }
                     }
-                    mediaMetadataRetriever.release()
-                } catch (e: Throwable) {
-                    Thread.getDefaultUncaughtExceptionHandler().uncaughtException(Thread.currentThread(), e)
                 }
             }
-        })
+            mediaMetadataRetriever.release() }
+            .subscribeOn(Schedulers.io())
+            .observeOn(Schedulers.io())
+            .doOnComplete { compositeDisposable.clear() }
+            .subscribe()
+            .addTo(compositeDisposable)
     }
 
 

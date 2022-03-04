@@ -8,6 +8,7 @@
     android:padding="16dp">
 
     <FrameLayout
+        android:visibility="gone"
         android:id="@+id/cropperButton"
         android:layout_width="@dimen/_70sdp"
         android:layout_height="@dimen/_70sdp"

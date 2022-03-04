@@ -17,10 +17,14 @@ object RealPathUtil {
                 val docId = DocumentsContract.getDocumentId(uri)
                 val split = docId.split(":".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
                 val type = split[0]
-                if ("primary".equals(type, ignoreCase = true)) return Environment.getExternalStorageDirectory().toString() + "/" + split[1]
+                if ("primary".equals(type, ignoreCase = true))
+                    return Environment.getExternalStorageDirectory().toString() + "/" + split[1]
             } else if (isDownloadsDocument(uri)) {
                 val id = DocumentsContract.getDocumentId(uri)
-                val contentUri = ContentUris.withAppendedId(Uri.parse("content://downloads/public_downloads"), java.lang.Long.valueOf(id))
+                val contentUri = ContentUris.withAppendedId(
+                    Uri.parse("content://downloads/public_downloads"),
+                    java.lang.Long.valueOf(id)
+                )
                 return getDataColumn(context, contentUri, null, null)
             } else if (isMediaDocument(uri)) {
                 val docId = DocumentsContract.getDocumentId(uri)
@@ -47,10 +51,21 @@ object RealPathUtil {
     private fun isGooglePhotosUri(uri: Uri): Boolean = "com.google.android.apps.photos.content" == uri.authority
 
     @SuppressLint("Recycle")
-    private fun getDataColumn(context: Context, uri: Uri?, selection: String?, selectionArgs: Array<String>?): String? {
+    private fun getDataColumn(
+        context: Context,
+        uri: Uri?,
+        selection: String?,
+        selectionArgs: Array<String>?
+    ): String? {
         val column = "_data"
         val projection = arrayOf(column)
-        val cursor = if (uri != null) context.contentResolver.query(uri, projection, selection, selectionArgs, null) else null
+        val cursor = if (uri != null) context.contentResolver.query(
+            uri,
+            projection,
+            selection,
+            selectionArgs,
+            null
+        ) else null
         cursor.use {
             if (it != null && it.moveToFirst()) {
                 val index = it.getColumnIndexOrThrow(column)

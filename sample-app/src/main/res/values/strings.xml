@@ -15,4 +15,5 @@
     </string>
     <string name="pick_a_video" translatable="false">Select or record a a video below to try it out:</string>
     <string name="trimming_progress" translatable="false">Trimming your video…</string>
+    <string name="photos_access_approve" translatable="false">To continue, approve access to your Photos.</string>
 </resources>
