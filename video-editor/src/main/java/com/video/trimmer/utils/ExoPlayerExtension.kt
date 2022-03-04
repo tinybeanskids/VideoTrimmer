@@ -1,6 +1,8 @@
 package com.video.trimmer.utils
 
-import com.google.android.exoplayer2.Player
-import com.google.android.exoplayer2.SimpleExoPlayer
+import android.annotation.SuppressLint
+import androidx.media3.common.Player
+import androidx.media3.exoplayer.ExoPlayer
 
-fun SimpleExoPlayer.isPlaying() = this.getPlaybackState() === Player.STATE_READY && this.getPlayWhenReady()
+@SuppressLint("UnsafeOptInUsageError")
+fun ExoPlayer.isPlaying() = this.playbackState == Player.STATE_READY && this.playWhenReady

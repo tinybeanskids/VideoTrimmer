@@ -1,49 +1,66 @@
 package com.video.trimmer.view
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.Typeface
 import android.media.MediaExtractor
 import android.media.MediaFormat
 import android.media.MediaMetadataRetriever
 import android.net.Uri
-import android.os.*
+import android.os.Environment
+import android.os.Handler
+import android.os.Message
+import android.os.ParcelFileDescriptor
 import android.util.AttributeSet
 import android.view.LayoutInflater
 import android.view.View
 import android.widget.FrameLayout
 import android.widget.SeekBar
-import com.google.android.exoplayer2.ExoPlaybackException
-import com.google.android.exoplayer2.Player
-import com.google.android.exoplayer2.SimpleExoPlayer
-import com.google.android.exoplayer2.source.ProgressiveMediaSource
-import com.google.android.exoplayer2.trackselection.AdaptiveTrackSelection
-import com.google.android.exoplayer2.trackselection.DefaultTrackSelector
-import com.google.android.exoplayer2.trackselection.TrackSelector
-import com.google.android.exoplayer2.upstream.DefaultDataSourceFactory
-import com.google.android.exoplayer2.util.Util
+import android.widget.Toast
+import androidx.media3.common.MediaItem
+import androidx.media3.common.Player
+import androidx.media3.common.util.Util
+import androidx.media3.datasource.DefaultDataSourceFactory
+import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.source.ProgressiveMediaSource
+import androidx.media3.exoplayer.trackselection.AdaptiveTrackSelection
+import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
+import androidx.media3.exoplayer.trackselection.TrackSelector
 import com.video.trimmer.R
 import com.video.trimmer.interfaces.OnProgressVideoListener
 import com.video.trimmer.interfaces.OnRangeSeekBarListener
 import com.video.trimmer.interfaces.OnTrimVideoListener
 import com.video.trimmer.interfaces.OnVideoListener
 import com.video.trimmer.utils.*
+import io.reactivex.rxjava3.core.Observable
+import io.reactivex.rxjava3.disposables.CompositeDisposable
+import io.reactivex.rxjava3.kotlin.addTo
+import io.reactivex.rxjava3.schedulers.Schedulers
 import kotlinx.android.synthetic.main.view_trimmer.view.*
 import java.io.File
 import java.io.FileNotFoundException
 import java.lang.ref.WeakReference
-import java.util.*
+import java.util.ArrayList
+import java.util.Locale
 
-class VideoTrimmer @JvmOverloads constructor(context: Context, attrs: AttributeSet, defStyleAttr: Int = 0) :
+
+@SuppressLint("UnsafeOptInUsageError")
+class VideoTrimmer @JvmOverloads constructor(
+    context: Context,
+    attrs: AttributeSet,
+    defStyleAttr: Int = 0
+) :
     FrameLayout(context, attrs, defStyleAttr) {
 
-    private lateinit var player: SimpleExoPlayer
+    private lateinit var player: ExoPlayer
     private var firstTimeLoad = true
 
-    private lateinit var mSrc: Uri
-    private var mFinalPath: String? = null
+    private lateinit var videoSource: Uri
+    private lateinit var slowVideoSource: Uri
+    private var finalPath: String? = null
 
-    private var mMaxDuration: Int = -1
-    private var mMinDuration: Int = -1
+    private var maxDuration: Int = -1
+    private var minDuration: Int = -1
     private var mListeners: ArrayList<OnProgressVideoListener> = ArrayList()
 
     private var mOnTrimVideoListener: OnTrimVideoListener? = null
@@ -59,17 +76,22 @@ class VideoTrimmer @JvmOverloads constructor(context: Context, attrs: AttributeS
 
     private var mMaxSize = -1
 
+    private val compositeDisposable = CompositeDisposable()
+
+    var fps = 29
+    lateinit var paths: MutableList<String>
+
     private lateinit var destinationFile: File
     private var destinationPath: String
         get() {
-            if (mFinalPath == null) {
+            if (finalPath == null) {
                 val folder = Environment.getExternalStorageDirectory()
-                mFinalPath = folder.path + File.separator
+                finalPath = folder.path + File.separator
             }
-            return mFinalPath ?: ""
+            return finalPath ?: ""
         }
-        set(finalPath) {
-            mFinalPath = finalPath
+        set(finalVideoPath) {
+            finalPath = finalVideoPath
         }
 
     init {
@@ -92,15 +114,9 @@ class VideoTrimmer @JvmOverloads constructor(context: Context, attrs: AttributeS
         })
 
 
-        player.addListener(object : Player.EventListener {
-
-            override fun onPlayerError(error: ExoPlaybackException) {
-                super.onPlayerError(error)
-                mOnTrimVideoListener?.onError("Something went wrong reason : $error")
-            }
-
+        player.addListener(object : Player.Listener {
             override fun onPlayerStateChanged(playWhenReady: Boolean, playbackState: Int) {
-                super.onPlayerStateChanged(playWhenReady, playbackState)
+                super.onPlayWhenReadyChanged(playWhenReady, playbackState)
 
                 if (playbackState == Player.STATE_READY && firstTimeLoad) {
                     onVideoPrepared()
@@ -109,19 +125,17 @@ class VideoTrimmer @JvmOverloads constructor(context: Context, attrs: AttributeS
                 } else if (playbackState == Player.STATE_ENDED) {
                     onVideoCompleted()
                 }
-
             }
-
         })
 
         icon_video_play.setOnClickListener {
-            if (player.isPlaying())
+            if (player.isPlaying)
                 pauseVideo()
             else playVideo()
         }
 
         video_loader.videoSurfaceView?.setOnClickListener {
-            if (player.isPlaying())
+            if (player.isPlaying)
                 pauseVideo()
         }
 
@@ -141,15 +155,17 @@ class VideoTrimmer @JvmOverloads constructor(context: Context, attrs: AttributeS
         })
 
         timeLineBar.addOnRangeSeekBarListener(object : OnRangeSeekBarListener {
-            override fun onCreate(rangeSeekBarView: RangeSeekBarView, index: Int, value: Float) {
-            }
-
             override fun onSeek(rangeSeekBarView: RangeSeekBarView, index: Int, value: Float) {
                 handlerTop.visibility = View.GONE
                 onSeekThumbs(index, value)
             }
 
+            override fun onCreate(rangeSeekBarView: RangeSeekBarView, index: Int, value: Float) {
+                onSeekThumbs(index, value)
+            }
+
             override fun onSeekStart(rangeSeekBarView: RangeSeekBarView, index: Int, value: Float) {
+                onSeekThumbs(index, value)
             }
 
             override fun onSeekStop(rangeSeekBarView: RangeSeekBarView, index: Int, value: Float) {
@@ -159,9 +175,8 @@ class VideoTrimmer @JvmOverloads constructor(context: Context, attrs: AttributeS
     }
 
     private fun initializePlayer() {
-        val trackSelector: TrackSelector =
-            DefaultTrackSelector(AdaptiveTrackSelection.Factory())
-        player = SimpleExoPlayer.Builder(context).setLooper(context.mainLooper).setTrackSelector(trackSelector).build()
+        val trackSelector: TrackSelector = DefaultTrackSelector(context, AdaptiveTrackSelection.Factory())
+        player = ExoPlayer.Builder(context).setLooper(context.mainLooper).setTrackSelector(trackSelector).build()
         video_loader.player = player
     }
 
@@ -204,76 +219,68 @@ class VideoTrimmer @JvmOverloads constructor(context: Context, attrs: AttributeS
     fun onSaveClicked() {
         icon_video_play.visibility = View.VISIBLE
         player.playWhenReady = false
-        BackgroundExecutor.execute(object : BackgroundExecutor.Task("", 0L, "") {
-            override fun execute() {
-                try {
-                    val mediaMetadataRetriever = MediaMetadataRetriever()
-                    mediaMetadataRetriever.setDataSource(context, mSrc)
-                    val metaDataKeyDuration =
-                        java.lang.Long.parseLong(mediaMetadataRetriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION))
+        Observable.fromCallable {
+            val mediaMetadataRetriever = MediaMetadataRetriever()
+            mediaMetadataRetriever.setDataSource(context, slowVideoSource)
+            val metaDataKeyDuration = mediaMetadataRetriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLong()
 
-                    if (mTimeVideo < MIN_TIME_FRAME) {
-                        if (metaDataKeyDuration - mEndPosition > MIN_TIME_FRAME - mTimeVideo) mEndPosition += MIN_TIME_FRAME - mTimeVideo
-                        else if (mStartPosition > MIN_TIME_FRAME - mTimeVideo) mStartPosition -= MIN_TIME_FRAME - mTimeVideo
-                    }
-
-                    val outputFileUri = Uri.fromFile(destinationFile)
-                    val outPutPath = RealPathUtil.realPathFromUriApi19(context, outputFileUri)
-                        ?: destinationFile.absolutePath
-                    mOnTrimVideoListener?.onInfo("SOURCE ${safUriToFFmpegPath(mSrc)}")
-                    mOnTrimVideoListener?.onInfo("DESTINATION $outPutPath")
-                    val extractor = MediaExtractor()
-                    var frameRate = 24
-                    try {
-                        extractor.setDataSource(context, mSrc, null)
-                        val numTracks = extractor.trackCount
-                        for (i in 0..numTracks - 1) {
-                            val format = extractor.getTrackFormat(i)
-                            val mime = format.getString(MediaFormat.KEY_MIME)
-                            if (mime!!.startsWith("video/")) {
-                                if (format.containsKey(MediaFormat.KEY_FRAME_RATE)) {
-                                    frameRate = format.getInteger(MediaFormat.KEY_FRAME_RATE)
-                                }
-                            }
-                        }
-                    } catch (e: Exception) {
-                        e.printStackTrace()
-                    } finally {
-                        extractor.release()
-                    }
-
-                    val duration =
-                        java.lang.Long.parseLong(mediaMetadataRetriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION))
-                    mOnTrimVideoListener?.onInfo("FRAME RATE $frameRate")
-                    mOnTrimVideoListener?.onInfo("FRAME COUNT ${(duration / 1000 * frameRate)}")
-
-                    //copy file to memory
-                    val inputCopy = File.createTempFile("temp-video-input", ".mp4", context.cacheDir)
-                    context.contentResolver.openInputStream(mSrc)?.apply {
-                        //save to cache
-                        inputCopy.copyInputStreamToFile(this)
-                    }
-                    //trim
-
-                    VideoOptions().trimVideoFromMemory(
-                        TrimVideoUtils.stringForTime(mStartPosition),
-                        TrimVideoUtils.stringForTime(mEndPosition),
-                        inputCopy.path,
-//                safUriToFFmpegPath(mSrc), //todo used for android 11 with pipe protocol
-                        outPutPath,
-                        destinationFile,
-                        mOnTrimVideoListener,
-                        mMaxSize
-                    )
-                } catch (e: Throwable) {
-                    Thread.getDefaultUncaughtExceptionHandler().uncaughtException(Thread.currentThread(), e)
+            if (mTimeVideo < MIN_TIME_FRAME) {
+                if (metaDataKeyDuration != null) {
+                    if (metaDataKeyDuration - mEndPosition > MIN_TIME_FRAME - mTimeVideo) mEndPosition += MIN_TIME_FRAME - mTimeVideo
+                    else if (mStartPosition > MIN_TIME_FRAME - mTimeVideo) mStartPosition -= MIN_TIME_FRAME - mTimeVideo
                 }
             }
 
-        })
+            val outputFileUri = Uri.fromFile(destinationFile)
+            val outPutPath = RealPathUtil.realPathFromUriApi19(context, outputFileUri) ?: destinationFile.absolutePath
+            mOnTrimVideoListener?.onInfo("SOURCE ${safUriToFFmpegPath(slowVideoSource)}")
+            mOnTrimVideoListener?.onInfo("DESTINATION $outPutPath")
+            val extractor = MediaExtractor()
+            var frameRate = 24
+            try {
+                extractor.setDataSource(context, slowVideoSource, null)
+                val numTracks = extractor.trackCount
+                for (i in 0..numTracks - 1) {
+                    val format = extractor.getTrackFormat(i)
+                    val mime = format.getString(MediaFormat.KEY_MIME)
+                    if (mime?.startsWith("video/") == true) {
+                        if (format.containsKey(MediaFormat.KEY_FRAME_RATE)) {
+                            frameRate = format.getInteger(MediaFormat.KEY_FRAME_RATE)
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            } finally {
+                extractor.release()
+            }
 
+            val duration = mediaMetadataRetriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLong()
+            mOnTrimVideoListener?.onInfo("FRAME RATE $frameRate")
+            duration?.let { mOnTrimVideoListener?.onInfo("FRAME COUNT ${(it / 1000 * frameRate)}") }
 
-        //remove original copy from cache
+            val inputCopy = File.createTempFile("temp-video-input", ".mp4", context.cacheDir)
+            val tempCopy = File.createTempFile("temp-video-recode", ".mp4", context.cacheDir)
+
+            context.contentResolver.openInputStream(videoSource)?.apply { inputCopy.copyInputStreamToFile(this) }
+
+            VideoOptions().trimVideoFromMemory(
+                TrimVideoUtils.stringForTime(mStartPosition),
+                TrimVideoUtils.stringForTime(mEndPosition),
+                inputCopy.path,
+                tempCopy.path,
+                outPutPath,
+                destinationFile,
+                mOnTrimVideoListener,
+                mMaxSize,
+                fps
+            )
+        }
+            .subscribeOn(Schedulers.computation())
+            .observeOn(Schedulers.computation())
+            .doOnError { mOnVideoListener?.onFFmpegError(it) }
+            .subscribe()
+            .addTo(compositeDisposable)
     }
 
     private fun safUriToFFmpegPath(uri: Uri): String {
@@ -303,28 +310,11 @@ class VideoTrimmer @JvmOverloads constructor(context: Context, attrs: AttributeS
     }
 
     fun onCancelClicked() {
-        //video_loader.stopPlayback()
-        //mOnTrimVideoListener?.cancelAction()
+        player.stop()
+        mOnTrimVideoListener?.cancelAction()
     }
 
     private fun onVideoPrepared() {
-        //val videoWidth = mp.videoWidth
-        //val videoHeight = mp.videoHeight
-        //val videoProportion = videoWidth.toFloat() / videoHeight.toFloat()
-//        val screenWidth = layout_surface_view.width
-//        val screenHeight = layout_surface_view.height
-//        val screenProportion = screenWidth.toFloat() / screenHeight.toFloat()
-//        val lp = video_loader.layoutParams
-//
-//        if (videoProportion > screenProportion) {
-//            lp.width = screenWidth
-//            lp.height = (screenWidth.toFloat() / videoProportion).toInt()
-//        } else {
-//            lp.width = (videoProportion * screenHeight.toFloat()).toInt()
-//            lp.height = screenHeight
-//        }
-//        video_loader.layoutParams = lp
-
         mDuration = player.duration.toFloat()
         setSeekBarPosition()
         setTimeFrames()
@@ -332,15 +322,15 @@ class VideoTrimmer @JvmOverloads constructor(context: Context, attrs: AttributeS
 
     private fun setSeekBarPosition() {
         when {
-            mDuration >= mMaxDuration && mMaxDuration != -1 -> {
-                mStartPosition = mDuration / 2 - mMaxDuration / 2
-                mEndPosition = mDuration / 2 + mMaxDuration / 2
+            mDuration >= maxDuration && maxDuration != -1 -> {
+                mStartPosition = mDuration / 2 - maxDuration / 2
+                mEndPosition = mDuration / 2 + maxDuration / 2
                 timeLineBar.setThumbValue(0, (mStartPosition * 100 / mDuration))
                 timeLineBar.setThumbValue(1, (mEndPosition * 100 / mDuration))
             }
-            mDuration <= mMinDuration && mMinDuration != -1 -> {
-                mStartPosition = mDuration / 2 - mMinDuration / 2
-                mEndPosition = mDuration / 2 + mMinDuration / 2
+            mDuration <= minDuration && minDuration != -1 -> {
+                mStartPosition = mDuration / 2 - minDuration / 2
+                mEndPosition = mDuration / 2 + minDuration / 2
                 timeLineBar.setThumbValue(0, (mStartPosition * 100 / mDuration))
                 timeLineBar.setThumbValue(1, (mEndPosition * 100 / mDuration))
             }
@@ -369,16 +359,16 @@ class VideoTrimmer @JvmOverloads constructor(context: Context, attrs: AttributeS
         when (index) {
             Thumb.LEFT -> {
                 mStartPosition = (mDuration * value / 100L)
-                if (mMaxDuration != -1 && mEndPosition - mStartPosition > mMaxDuration) {
-                    val offset = mEndPosition - mStartPosition - mMaxDuration
+                if (maxDuration != -1 && mEndPosition - mStartPosition > maxDuration) {
+                    val offset = mEndPosition - mStartPosition - maxDuration
                     mEndPosition -= offset
                 }
                 player.seekTo(mStartPosition.toLong())
             }
             Thumb.RIGHT -> {
                 mEndPosition = (mDuration * value / 100L)
-                if (mMaxDuration != -1 && mEndPosition - mStartPosition > mMaxDuration) {
-                    val offset = mEndPosition - mStartPosition - mMaxDuration
+                if (maxDuration != -1 && mEndPosition - mStartPosition > maxDuration) {
+                    val offset = mEndPosition - mStartPosition - maxDuration
                     mStartPosition += offset
                 }
             }
@@ -405,7 +395,13 @@ class VideoTrimmer @JvmOverloads constructor(context: Context, attrs: AttributeS
                 item.updateProgress(position.toFloat(), mDuration, (position * 100 / mDuration))
             }
         } else {
-            mListeners[0].updateProgress(position.toFloat(), mDuration, (position * 100 / mDuration))
+            if(mListeners.size>0){
+                mListeners[0].updateProgress(
+                    position.toFloat(),
+                    mDuration,
+                    (position * 100 / mDuration)
+                )
+            }
         }
     }
 
@@ -439,28 +435,7 @@ class VideoTrimmer @JvmOverloads constructor(context: Context, attrs: AttributeS
     }
 
     fun destroy() {
-        BackgroundExecutor.cancelAll("", true)
-        UiThreadExecutor.cancelAll("")
-    }
-
-    fun setMaxDuration(maxDuration: Int): VideoTrimmer {
-        mMaxDuration = maxDuration * 1000
-        return this
-    }
-
-    fun setMaxSize(maxSize: Int): VideoTrimmer {
-        mMaxSize = maxSize * 1000
-        return this
-    }
-
-    fun setMinDuration(minDuration: Int): VideoTrimmer {
-        mMinDuration = minDuration * 1000
-        return this
-    }
-
-    fun setDestinationPath(path: String): VideoTrimmer {
-        destinationPath = path
-        return this
+        compositeDisposable.clear()
     }
 
     fun setDestinationFile(file: File): VideoTrimmer {
@@ -468,20 +443,44 @@ class VideoTrimmer @JvmOverloads constructor(context: Context, attrs: AttributeS
         return this
     }
 
-    fun setVideoURI(videoURI: Uri): VideoTrimmer {
-        mSrc = videoURI
-        val dataSourceFactory = DefaultDataSourceFactory(
-            context,
-            Util.getUserAgent(context, context.applicationInfo.name)
-        )
+    fun encodeSlowMotion(videoURI: Uri) {
+        videoSource = videoURI
+        val temporalFrameDropVideoFile = File.createTempFile("framerate_drop", ".mp4", context.cacheDir)
+        val inputVideoFile = File.createTempFile("temp-video-input", ".mp4", context.cacheDir)
+        try {
+            context.contentResolver.openInputStream(videoSource)?.apply {
+                inputVideoFile.copyInputStreamToFile(this)
+            }
+        }catch (e:java.lang.Exception){
+            Toast.makeText(context, e.message.toString(), Toast.LENGTH_LONG).show()
+            VideoOptions().deleteFiles(temporalFrameDropVideoFile.path, inputVideoFile.path)
+            mOnVideoListener?.onFFmpegError(e)
+            return
+        }
+        VideoOptions().encodeSlowMotionVideo(mOnVideoListener, inputVideoFile, temporalFrameDropVideoFile)
+            .doOnError {
+                mOnVideoListener?.onFFmpegError(it)
+            }.subscribe {
+                mOnVideoListener?.onFFmpegFinished(it.first)
+                slowVideoSource = Uri.parse(it.first)
+                fps = it.second
+            }.addTo(compositeDisposable)
+    }
 
+    fun setVideoPath(path: String): VideoTrimmer {
+        slowVideoSource = Uri.parse(path)
+
+        val dataSourceFactory = DefaultDataSourceFactory(context, Util.getUserAgent(context, context.applicationInfo.name))
+
+        val mediaItem = MediaItem.fromUri(slowVideoSource)
         val mediaSource = ProgressiveMediaSource
             .Factory(dataSourceFactory)
-            .createMediaSource(mSrc)
+            .createMediaSource(mediaItem)
 
-        player.prepare(mediaSource)
+        player.setMediaSource(mediaSource)
+        player.prepare()
         video_loader.requestFocus()
-        timeLineView.setVideo(mSrc)
+        timeLineView.setVideo(slowVideoSource)
         return this
     }
 
@@ -495,15 +494,14 @@ class VideoTrimmer @JvmOverloads constructor(context: Context, attrs: AttributeS
         player.release()
     }
 
-
-    private class MessageHandler internal constructor(view: VideoTrimmer) : Handler() {
+    private class MessageHandler(view: VideoTrimmer) : Handler() {
         private val mView: WeakReference<VideoTrimmer> = WeakReference(view)
         override fun handleMessage(msg: Message) {
             val view = mView.get()
             if (view == null || view.video_loader == null) return
             view.notifyProgressUpdate(true)
-            if (view.video_loader.player != null && view.video_loader.player!!.playbackState == Player.STATE_READY
-                && view.video_loader.player!!.playWhenReady
+            if (view.video_loader.player != null && view.video_loader.player?.playbackState == Player.STATE_READY
+                && view.video_loader.player?.playWhenReady == true
             )
                 sendEmptyMessageDelayed(0, 10)
         }
@@ -513,4 +511,5 @@ class VideoTrimmer @JvmOverloads constructor(context: Context, attrs: AttributeS
         private const val MIN_TIME_FRAME = 1000
         private const val SHOW_PROGRESS = 2
     }
+
 }
