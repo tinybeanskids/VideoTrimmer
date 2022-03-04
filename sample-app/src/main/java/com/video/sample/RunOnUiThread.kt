@@ -3,7 +3,6 @@ package com.video.sample
 import android.content.Context
 import android.os.Handler
 import android.os.Looper
-import android.util.Log
 
 class RunOnUiThread(var context: Context?) {
     fun safely(dothis: () -> Unit) {
@@ -20,8 +19,9 @@ class RunOnUiThread(var context: Context?) {
         try {
             dothis.invoke()
         } catch (e: Exception) {
-            Log.e("runonui - ${context!!::class.java.canonicalName}", e.toString())
-            e.printStackTrace()
+            context?.let {
+                e.printStackTrace()
+            }
         }
     }
 }

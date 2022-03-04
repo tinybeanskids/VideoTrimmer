@@ -5,15 +5,20 @@ import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.Rect
-import androidx.core.content.ContextCompat
 import android.util.AttributeSet
 import android.view.MotionEvent
 import android.view.View
+import androidx.core.content.ContextCompat
 import com.video.trimmer.R
 import com.video.trimmer.interfaces.OnRangeSeekBarListener
+import io.reactivex.rxjava3.core.Observable
 
 
-class RangeSeekBarView @JvmOverloads constructor(context: Context, attrs: AttributeSet, defStyleAttr: Int = 0) : View(context, attrs, defStyleAttr) {
+class RangeSeekBarView @JvmOverloads constructor(
+    context: Context,
+    attrs: AttributeSet,
+    defStyleAttr: Int = 0
+) : View(context, attrs, defStyleAttr) {
 
     private var mHeightTimeLine = 0
     lateinit var thumbs: List<Thumb>
@@ -121,12 +126,12 @@ class RangeSeekBarView @JvmOverloads constructor(context: Context, attrs: Attrib
             MotionEvent.ACTION_MOVE -> {
                 mThumb = thumbs[currentThumb]
                 mThumb2 = thumbs[if (currentThumb == 0) 1 else 0]
-                // Calculate the distance moved
                 val dx = coordinate - mThumb.lastTouchX
                 val newX = mThumb.pos + dx
                 if (currentThumb == 0) {
                     when {
-                        newX + mThumb.widthBitmap >= mThumb2.pos -> mThumb.pos = mThumb2.pos - mThumb.widthBitmap
+                        newX + mThumb.widthBitmap >= mThumb2.pos -> mThumb.pos =
+                            mThumb2.pos - mThumb.widthBitmap
                         newX <= mPixelRangeMin -> mThumb.pos = mPixelRangeMin
                         else -> {
                             checkPositionThumb(mThumb, mThumb2, dx, true)
@@ -137,7 +142,8 @@ class RangeSeekBarView @JvmOverloads constructor(context: Context, attrs: Attrib
 
                 } else {
                     when {
-                        newX <= mThumb2.pos + mThumb2.widthBitmap -> mThumb.pos = mThumb2.pos + mThumb.widthBitmap
+                        newX <= mThumb2.pos + mThumb2.widthBitmap -> mThumb.pos =
+                            mThumb2.pos + mThumb.widthBitmap
                         newX >= mPixelRangeMax -> mThumb.pos = mPixelRangeMax
                         else -> {
                             checkPositionThumb(mThumb2, mThumb, dx, false)
@@ -155,7 +161,12 @@ class RangeSeekBarView @JvmOverloads constructor(context: Context, attrs: Attrib
         return false
     }
 
-    private fun checkPositionThumb(mThumbLeft: Thumb, mThumbRight: Thumb, dx: Float, isLeftMove: Boolean) {
+    private fun checkPositionThumb(
+        mThumbLeft: Thumb,
+        mThumbRight: Thumb,
+        dx: Float,
+        isLeftMove: Boolean
+    ) {
         if (isLeftMove && dx < 0) {
             if (mThumbRight.pos + dx - mThumbLeft.pos > mMaxWidth) {
                 mThumbRight.pos = mThumbLeft.pos + dx + mMaxWidth
@@ -167,17 +178,6 @@ class RangeSeekBarView @JvmOverloads constructor(context: Context, attrs: Attrib
                 setThumbPos(0, mThumbLeft.pos)
             }
         }
-    }
-
-    private fun getUnstuckFrom(index: Int): Int {
-        val unstuck = 0
-        val lastVal = thumbs[index].value
-        for (i in index - 1 downTo 0) {
-            val th = thumbs[i]
-            if (th.value != lastVal)
-                return i + 1
-        }
-        return unstuck
     }
 
     private fun pixelToScale(index: Int, pixelValue: Float): Float {
@@ -268,9 +268,13 @@ class RangeSeekBarView @JvmOverloads constructor(context: Context, attrs: Attrib
         if (thumbs.isNotEmpty()) {
             for (th in thumbs) {
                 if (th.index == 0) {
-                    if (th.bitmap != null) canvas.drawBitmap(th.bitmap!!, th.pos + paddingLeft, 0f, null)
+                    th.bitmap?.let { thumb ->
+                        canvas.drawBitmap(thumb, th.pos + paddingLeft, 0f, null)
+                    }
                 } else {
-                    if (th.bitmap != null) canvas.drawBitmap(th.bitmap!!, th.pos - paddingRight, 0f, null)
+                    th.bitmap?.let { thumb ->
+                        canvas.drawBitmap(thumb, th.pos - paddingRight, 0f, null)
+                    }
                 }
             }
         }
@@ -282,36 +286,32 @@ class RangeSeekBarView @JvmOverloads constructor(context: Context, attrs: Attrib
     }
 
     private fun onCreate(rangeSeekBarView: RangeSeekBarView, index: Int, value: Float) {
-        if (mListeners == null) return
-        else {
-            for (item in mListeners!!) {
+        mListeners?.let { listener ->
+            for (item in listener) {
                 item.onCreate(rangeSeekBarView, index, value)
             }
         }
     }
 
     private fun onSeek(rangeSeekBarView: RangeSeekBarView, index: Int, value: Float) {
-        if (mListeners == null) return
-        else {
-            for (item in mListeners!!) {
+        mListeners?.let { listener ->
+            for (item in listener) {
                 item.onSeek(rangeSeekBarView, index, value)
             }
         }
     }
 
     private fun onSeekStart(rangeSeekBarView: RangeSeekBarView, index: Int, value: Float) {
-        if (mListeners == null) return
-        else {
-            for (item in mListeners!!) {
+        mListeners?.let { listener ->
+            for (item in listener) {
                 item.onSeekStart(rangeSeekBarView, index, value)
             }
         }
     }
 
     private fun onSeekStop(rangeSeekBarView: RangeSeekBarView, index: Int, value: Float) {
-        if (mListeners == null) return
-        else {
-            for (item in mListeners!!) {
+        mListeners?.let { listener ->
+            for (item in listener) {
                 item.onSeekStop(rangeSeekBarView, index, value)
             }
         }

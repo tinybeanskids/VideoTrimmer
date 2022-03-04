@@ -10,7 +10,6 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import com.video.trimmer.utils.FileUtils
 import kotlinx.android.synthetic.main.activity_main.*
 
 class MainActivity : AppCompatActivity() {
@@ -35,20 +34,11 @@ class MainActivity : AppCompatActivity() {
 
     public override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         if (resultCode == Activity.RESULT_OK) {
-            if (requestCode == REQUEST_VIDEO_TRIMMER) {
-                val selectedUri = data!!.data
-                if (selectedUri != null) {
-                    startTrimActivity(selectedUri)
-                } else {
-                    Toast.makeText(this@MainActivity, R.string.toast_cannot_retrieve_selected_video, Toast.LENGTH_SHORT).show()
-                }
-            } else if (requestCode == REQUEST_VIDEO_CROPPER) {
-                val selectedUri = data!!.data
-                if (selectedUri != null) {
-                //    startCropActivity(selectedUri)
-                } else {
-                    Toast.makeText(this@MainActivity, R.string.toast_cannot_retrieve_selected_video, Toast.LENGTH_SHORT).show()
-                }
+            val selectedUri = data?.data
+            if (selectedUri != null) {
+                startTrimActivity(selectedUri)
+            } else {
+                Toast.makeText(this@MainActivity, R.string.toast_cannot_retrieve_selected_video, Toast.LENGTH_SHORT).show()
             }
         }
         super.onActivityResult(requestCode, resultCode, data)
@@ -74,15 +64,5 @@ class MainActivity : AppCompatActivity() {
         if (writePermission != PackageManager.PERMISSION_GRANTED && readPermission != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.WRITE_EXTERNAL_STORAGE, Manifest.permission.READ_EXTERNAL_STORAGE), 101)
         } else doThis()
-    }
-
-    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
-        when (requestCode) {
-            101 -> {
-                if (grantResults.isEmpty() || grantResults[0] != PackageManager.PERMISSION_GRANTED) {
-                    PermissionsDialog(this@MainActivity, "To continue, give permission to access to your Photos.").show()
-                } else doThis()
-            }
-        }
     }
 }

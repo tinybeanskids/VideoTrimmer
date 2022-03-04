@@ -43,11 +43,21 @@ class Thumb private constructor() {
                 th.index = i
                 if (i == 0) {
                     val resImageLeft = ContextCompat.getDrawable(context, R.drawable.thumb)
-                    th.bitmap = resImageLeft?.toBitmap(th.convertDpToPixel(10f,context).toInt(), th.convertDpToPixel(40f,context).toInt(), null)
+                    th.bitmap = resImageLeft?.toBitmap(
+                        convertDpToPixel(10f, context).toInt(), convertDpToPixel(
+                            40f,
+                            context
+                        ).toInt(), null
+                    )
                 } else {
 
                     val resImageRight = ContextCompat.getDrawable(context, R.drawable.thumb)
-                    th.bitmap = resImageRight?.toBitmap(th.convertDpToPixel(10f,context).toInt(), th.convertDpToPixel(40f,context).toInt(), null)
+                    th.bitmap = resImageRight?.toBitmap(
+                        convertDpToPixel(10f, context).toInt(), convertDpToPixel(
+                            40f,
+                            context
+                        ).toInt(), null
+                    )
                 }
                 thumbs.add(th)
             }
