@@ -457,6 +457,7 @@ class VideoTrimmer @JvmOverloads constructor(
             mOnVideoListener?.onFFmpegError(e)
             return
         }
+        timeLineView.setVideo(videoSource)
         VideoOptions().encodeSlowMotionVideo(mOnVideoListener, inputVideoFile, temporalFrameDropVideoFile)
             .doOnError {
                 mOnVideoListener?.onFFmpegError(it)
