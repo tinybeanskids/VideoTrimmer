@@ -32,7 +32,7 @@ class VideoOptions {
     ) {
         try {
             var rc: Int
-            if (fps > 30) {
+            if (fps > 118) {
                 FFmpeg.execute("-y -i $inputPath -filter_complex \"[0:v]setpts=3.3*PTS[v];[0:a]atempo=0.55,atempo=0.6,asetrate=44100*1.25,aformat=sample_rates=44100[a]\" -map \"[v]\" -map \"[a]\" -r 30 $tempPath")
                 rc =
                     FFmpeg.execute("-y -noaccurate_seek -ss $startPosition -to $endPosition -i $tempPath -c copy $outputPath -avoid_negative_ts make_zero")
@@ -94,7 +94,7 @@ class VideoOptions {
                 getFrameRateFromMediaStreams(mediaStreams)
             }.map {
                 val fps = it
-                if (fps > 30) {
+                if (fps > 118) {
                     slowMotion=true
                     try {
                         val ratioVideo = ((fps / 30) * 0.83).toFloat()
