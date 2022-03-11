@@ -42,6 +42,7 @@ import java.io.FileNotFoundException
 import java.lang.ref.WeakReference
 import java.util.ArrayList
 import java.util.Locale
+import java.util.concurrent.TimeUnit
 
 
 @SuppressLint("UnsafeOptInUsageError")
@@ -59,8 +60,8 @@ class VideoTrimmer @JvmOverloads constructor(
     private lateinit var slowVideoSource: Uri
     private var finalPath: String? = null
 
-    private var maxDuration: Int = -1
-    private var minDuration: Int = -1
+    private var maxDuration: Long = -1
+    private var minDuration: Long = -1
     private var mListeners: ArrayList<OnProgressVideoListener> = ArrayList()
 
     private var mOnTrimVideoListener: OnTrimVideoListener? = null
@@ -322,15 +323,15 @@ class VideoTrimmer @JvmOverloads constructor(
 
     private fun setSeekBarPosition() {
         when {
-            mDuration >= maxDuration && maxDuration != -1 -> {
-                mStartPosition = mDuration / 2 - maxDuration / 2
-                mEndPosition = mDuration / 2 + maxDuration / 2
+            mDuration >= maxDuration && maxDuration != -1L -> {
+                mStartPosition = mDuration / 2f - maxDuration / 2f
+                mEndPosition = mDuration / 2f + maxDuration / 2f
                 timeLineBar.setThumbValue(0, (mStartPosition * 100 / mDuration))
                 timeLineBar.setThumbValue(1, (mEndPosition * 100 / mDuration))
             }
-            mDuration <= minDuration && minDuration != -1 -> {
-                mStartPosition = mDuration / 2 - minDuration / 2
-                mEndPosition = mDuration / 2 + minDuration / 2
+            mDuration <= minDuration && minDuration != -1L -> {
+                mStartPosition = mDuration / 2f - minDuration / 2f
+                mEndPosition = mDuration / 2f + minDuration / 2f
                 timeLineBar.setThumbValue(0, (mStartPosition * 100 / mDuration))
                 timeLineBar.setThumbValue(1, (mEndPosition * 100 / mDuration))
             }
@@ -359,7 +360,7 @@ class VideoTrimmer @JvmOverloads constructor(
         when (index) {
             Thumb.LEFT -> {
                 mStartPosition = (mDuration * value / 100L)
-                if (maxDuration != -1 && mEndPosition - mStartPosition > maxDuration) {
+                if (maxDuration != -1L && mEndPosition - mStartPosition > maxDuration) {
                     val offset = mEndPosition - mStartPosition - maxDuration
                     mEndPosition -= offset
                 }
@@ -367,7 +368,7 @@ class VideoTrimmer @JvmOverloads constructor(
             }
             Thumb.RIGHT -> {
                 mEndPosition = (mDuration * value / 100L)
-                if (maxDuration != -1 && mEndPosition - mStartPosition > maxDuration) {
+                if (maxDuration != -1L && mEndPosition - mStartPosition > maxDuration) {
                     val offset = mEndPosition - mStartPosition - maxDuration
                     mStartPosition += offset
                 }
@@ -436,6 +437,11 @@ class VideoTrimmer @JvmOverloads constructor(
 
     fun destroy() {
         compositeDisposable.clear()
+    }
+
+    fun setMaxDuration(duration: Long, timeUnit: TimeUnit): VideoTrimmer {
+        maxDuration = TimeUnit.MILLISECONDS.convert(duration,timeUnit)
+        return this
     }
 
     fun setDestinationFile(file: File): VideoTrimmer {

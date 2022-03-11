@@ -18,6 +18,7 @@ import com.video.trimmer.interfaces.OnTrimVideoListener
 import com.video.trimmer.interfaces.OnVideoListener
 import kotlinx.android.synthetic.main.activity_trimmer.*
 import java.io.File
+import java.util.concurrent.TimeUnit
 
 
 class TrimmerActivity : AppCompatActivity(), OnTrimVideoListener, OnVideoListener {
@@ -49,6 +50,7 @@ class TrimmerActivity : AppCompatActivity(), OnTrimVideoListener, OnVideoListene
                 .setOnVideoListener(this)
                 .setVideoInformationVisibility(true)
                 .setDestinationFile(getDestinationFile())
+                .setMaxDuration(3,TimeUnit.MINUTES)
                 .encodeSlowMotion(Uri.parse(path))
         }
 
