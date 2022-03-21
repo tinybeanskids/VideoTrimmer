@@ -24,8 +24,8 @@ class VideoOptions {
         endPosition: String,
         inputPath: String,
         tempPath: String,
-        outputPath: String,
-        file: File,
+        outputPath: String?,
+        file: File?,
         listener: OnTrimVideoListener?,
         maxSize: Int,
         fps: Int
@@ -43,31 +43,33 @@ class VideoOptions {
 
             deleteFiles(inputPath, tempPath)
 
-            if (maxSize != -1 && file.length() / 1024 > maxSize) {
-                rc = 1
+            file?.let {
+                if (maxSize != -1 && it.length() / 1024 > maxSize) {
+                    rc = 1
+                }
             }
 
             when (rc) {
                 TrimmerStatusCode.SUCCESS.value -> {
-                    listener?.getResult(file)
+                    file?.let { listener?.getResult(it) }
                 }
                 TrimmerStatusCode.FAILED.value -> {
                     listener?.onError("Command execution cancelled by user.")
-                    deleteFiles(outputPath)
+                    outputPath?.let { deleteFiles(it) }
                 }
                 TrimmerStatusCode.LIMIT_REACHED.value -> {
                     listener?.onError("File size is greater then ${maxSize / 1000} MB")
-                    deleteFiles(outputPath)
+                    outputPath?.let { deleteFiles(it) }
                 }
                 else -> {
                     listener?.onError(String.format("Command execution failed with rc=%d and the output below.", rc))
                     Config.printLastCommandOutput(Log.INFO)
-                    deleteFiles(outputPath)
+                    outputPath?.let { deleteFiles(it) }
                 }
             }
         } catch (e: Exception) {
             listener?.onError(e.localizedMessage ?: "generic error")
-            deleteFiles(inputPath, outputPath)
+            outputPath?.let { deleteFiles(inputPath, it) }
         }
     }
 
