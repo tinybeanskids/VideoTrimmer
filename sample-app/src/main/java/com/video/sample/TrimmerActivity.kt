@@ -128,7 +128,7 @@ class TrimmerActivity : AppCompatActivity(), OnTrimVideoListener, OnVideoListene
         loadingDialog.show()
     }
 
-    lateinit var doThis: () -> Unit
+    var doThis: (() -> Unit)? = null
     private fun setupPermissions(doSomething: () -> Unit) {
         val writePermission = ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE)
         val readPermission = ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE)
@@ -142,7 +142,7 @@ class TrimmerActivity : AppCompatActivity(), OnTrimVideoListener, OnVideoListene
                 ),
                 101
             )
-        } else doThis()
+        } else doThis?.let { it() }
     }
 
     override fun onRequestPermissionsResult(
@@ -157,7 +157,7 @@ class TrimmerActivity : AppCompatActivity(), OnTrimVideoListener, OnVideoListene
                         this@TrimmerActivity,
                         this.getString(R.string.photos_access_approve)
                     ).show()
-                } else doThis()
+                } else doThis?.let { it() }
             }
         }
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
