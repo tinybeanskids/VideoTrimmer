@@ -40,7 +40,7 @@ class TrimmerActivity : AppCompatActivity(), OnTrimVideoListener, OnVideoListene
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_trimmer)
 
-        setupPermissions {
+        doWithPermissionCheck {
             val extraIntent = intent
             val path =
                 if (extraIntent != null) extraIntent.getStringExtra(MainActivity.EXTRA_VIDEO_PATH)
@@ -128,11 +128,11 @@ class TrimmerActivity : AppCompatActivity(), OnTrimVideoListener, OnVideoListene
         loadingDialog.show()
     }
 
-    var doThis: (() -> Unit)? = null
-    private fun setupPermissions(doSomething: () -> Unit) {
+    var doWithPermissionCheckAction: (() -> Unit)? = null
+    private fun doWithPermissionCheck(action: () -> Unit) {
         val writePermission = ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE)
         val readPermission = ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE)
-        doThis = doSomething
+        doWithPermissionCheckAction = action
         if (writePermission != PackageManager.PERMISSION_GRANTED && readPermission != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(
                 this,
@@ -142,7 +142,7 @@ class TrimmerActivity : AppCompatActivity(), OnTrimVideoListener, OnVideoListene
                 ),
                 101
             )
-        } else doThis?.let { it() }
+        } else doWithPermissionCheckAction?.let { it() }
     }
 
     override fun onRequestPermissionsResult(
@@ -157,7 +157,7 @@ class TrimmerActivity : AppCompatActivity(), OnTrimVideoListener, OnVideoListene
                         this@TrimmerActivity,
                         this.getString(R.string.photos_access_approve)
                     ).show()
-                } else doThis?.let { it() }
+                } else doWithPermissionCheckAction?.let { it() }
             }
         }
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)

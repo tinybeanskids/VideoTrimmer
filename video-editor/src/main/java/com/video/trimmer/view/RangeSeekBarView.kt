@@ -11,8 +11,6 @@ import android.view.View
 import androidx.core.content.ContextCompat
 import com.video.trimmer.R
 import com.video.trimmer.interfaces.OnRangeSeekBarListener
-import io.reactivex.rxjava3.core.Observable
-
 
 class RangeSeekBarView @JvmOverloads constructor(
     context: Context,
@@ -68,10 +66,12 @@ class RangeSeekBarView @JvmOverloads constructor(
     }
 
     fun initMaxWidth() {
-        thumbs?.let {
-            mMaxWidth = it[1].pos - it[0].pos
-            onSeekStop(this, 0, it[0].value)
-            onSeekStop(this, 1, it[1].value)
+        thumbs?.let { thumbsList ->
+            if (thumbsList.size == 2) {
+                mMaxWidth = thumbsList[1].pos - thumbsList[0].pos
+                onSeekStop(this, 0, thumbsList[0].value)
+                onSeekStop(this, 1, thumbsList[1].value)
+            }
         }
     }
 
@@ -90,11 +90,11 @@ class RangeSeekBarView @JvmOverloads constructor(
         mPixelRangeMax = mViewWidth - mThumbWidth
 
         if (mFirstRun) {
-            thumbs?.let {
-                for (i in it.indices) {
-                    val th = it[i]
-                    th.value = mScaleRangeMax * i
-                    th.pos = mPixelRangeMax * i
+            thumbs?.let { thumbsList ->
+                for (index in thumbsList.indices) {
+                    val thumb = thumbsList[index]
+                    thumb.value = mScaleRangeMax * index
+                    thumb.pos = mPixelRangeMax * index
                 }
                 getThumbValue(currentThumb)?.let { it -> onCreate(this, currentThumb, it) }
                 mFirstRun = false

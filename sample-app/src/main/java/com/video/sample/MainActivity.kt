@@ -23,7 +23,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun pickFromGallery(intentCode: Int) {
-        setupPermissions {
+        doWithPermissionCheck {
             val intent = Intent()
             intent.setTypeAndNormalize("video/*")
             intent.action = Intent.ACTION_OPEN_DOCUMENT
@@ -56,13 +56,11 @@ class MainActivity : AppCompatActivity() {
         internal const val EXTRA_VIDEO_PATH = "EXTRA_VIDEO_PATH"
     }
 
-    var doThis: (() -> Unit)? = null
-    private fun setupPermissions(doSomething: () -> Unit) {
+    private fun doWithPermissionCheck(action: () -> Unit) {
         val writePermission = ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE)
         val readPermission = ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE)
-        doThis = doSomething
         if (writePermission != PackageManager.PERMISSION_GRANTED && readPermission != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.WRITE_EXTERNAL_STORAGE, Manifest.permission.READ_EXTERNAL_STORAGE), 101)
-        } else doThis?.let { it() }
+        } else action()
     }
 }
