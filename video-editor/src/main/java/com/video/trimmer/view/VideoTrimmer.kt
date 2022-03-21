@@ -213,8 +213,7 @@ class VideoTrimmer @JvmOverloads constructor(
     }
 
     private fun setUpMargins() {
-        timeLineBar.thumbs?.get(0)?.widthBitmap?.let {
-            val marge = it
+        timeLineBar.thumbs?.get(0)?.widthBitmap?.let { marge ->
             val lp = timeLineView.layoutParams as LayoutParams
             lp.setMargins(marge, 0, marge, 0)
             timeLineView.layoutParams = lp
@@ -238,14 +237,14 @@ class VideoTrimmer @JvmOverloads constructor(
 
             val outputFileUri = Uri.fromFile(destinationFile)
             val outPutPath = RealPathUtil.realPathFromUriApi19(context, outputFileUri) ?: destinationFile?.absolutePath
-            slowVideoSource?.let { mOnTrimVideoListener?.onInfo("SOURCE ${safUriToFFmpegPath(it)}") }
+            slowVideoSource?.let { mOnTrimVideoListener?.onInfo("SOURCE ${safUriToFFmpegPath(it)}") } ?: mOnTrimVideoListener?.onError("Error getting video.")
             mOnTrimVideoListener?.onInfo("DESTINATION $outPutPath")
             val extractor = MediaExtractor()
             var frameRate = 24
             try {
-                slowVideoSource?.let { extractor.setDataSource(context, it, null) }
+                slowVideoSource?.let { extractor.setDataSource(context, it, null) } ?: mOnTrimVideoListener?.onError("Error getting video.")
                 val numTracks = extractor.trackCount
-                for (i in 0..numTracks - 1) {
+                for (i in 0 until numTracks) {
                     val format = extractor.getTrackFormat(i)
                     val mime = format.getString(MediaFormat.KEY_MIME)
                     if (mime?.startsWith("video/") == true) {
@@ -262,7 +261,7 @@ class VideoTrimmer @JvmOverloads constructor(
 
             val duration = mediaMetadataRetriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLong()
             mOnTrimVideoListener?.onInfo("FRAME RATE $frameRate")
-            duration?.let { mOnTrimVideoListener?.onInfo("FRAME COUNT ${(it / 1000 * frameRate)}") }
+            duration?.let { mOnTrimVideoListener?.onInfo("FRAME COUNT ${(it / 1000 * frameRate)}") } ?: mOnTrimVideoListener?.onError("Error getting video.")
 
             val inputCopy = File.createTempFile("temp-video-input", ".mp4", context.cacheDir)
             val tempCopy = File.createTempFile("temp-video-recode", ".mp4", context.cacheDir)
@@ -466,14 +465,14 @@ class VideoTrimmer @JvmOverloads constructor(
                 context.contentResolver.openInputStream(it)?.apply {
                     inputVideoFile.copyInputStreamToFile(this)
                 }
-            }
+            } ?: mOnTrimVideoListener?.onError("Error getting video.")
         } catch (e: java.lang.Exception) {
             Toast.makeText(context, e.message.toString(), Toast.LENGTH_LONG).show()
             VideoOptions().deleteFiles(temporalFrameDropVideoFile.path, inputVideoFile.path)
             mOnVideoListener?.onFFmpegError(e)
             return
         }
-        videoSource?.let { timeLineView.setVideo(it) }
+        videoSource?.let { timeLineView.setVideo(it) } ?: mOnTrimVideoListener?.onError("Error getting video.")
         VideoOptions().encodeSlowMotionVideo(mOnVideoListener, inputVideoFile, temporalFrameDropVideoFile)
             .doOnError {
                 mOnVideoListener?.onFFmpegError(it)
