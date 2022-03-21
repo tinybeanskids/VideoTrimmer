@@ -213,10 +213,12 @@ class VideoTrimmer @JvmOverloads constructor(
     }
 
     private fun setUpMargins() {
-        val marge = timeLineBar.thumbs[0].widthBitmap
-        val lp = timeLineView.layoutParams as LayoutParams
-        lp.setMargins(marge, 0, marge, 0)
-        timeLineView.layoutParams = lp
+        timeLineBar.thumbs?.get(0)?.widthBitmap?.let {
+            val marge = it
+            val lp = timeLineView.layoutParams as LayoutParams
+            lp.setMargins(marge, 0, marge, 0)
+            timeLineView.layoutParams = lp
+        }
     }
 
     fun onSaveClicked() {

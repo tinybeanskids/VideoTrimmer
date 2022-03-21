@@ -11,6 +11,7 @@ import android.view.View
 import androidx.core.content.ContextCompat
 import com.video.trimmer.R
 import com.video.trimmer.interfaces.OnRangeSeekBarListener
+import io.reactivex.rxjava3.core.Observable
 
 
 class RangeSeekBarView @JvmOverloads constructor(
@@ -20,7 +21,7 @@ class RangeSeekBarView @JvmOverloads constructor(
 ) : View(context, attrs, defStyleAttr) {
 
     private var mHeightTimeLine = 0
-    private var thumbs: List<Thumb>? = null
+    var thumbs: List<Thumb>? = null
     private var mListeners: MutableList<OnRangeSeekBarListener>? = null
     private var mMaxWidth = 0f
     private var mThumbWidth = 0f
@@ -238,7 +239,7 @@ class RangeSeekBarView @JvmOverloads constructor(
 
     fun setThumbValue(index: Int, value: Float) {
         thumbs?.let {
-            it[index].value = value
+            it[index].value  = value
         }
         calculateThumbPos(index)
         invalidate()
@@ -268,7 +269,7 @@ class RangeSeekBarView @JvmOverloads constructor(
     }
 
     private fun drawShadow(canvas: Canvas) {
-        thumbs?.let { listOfThumbs ->
+        thumbs?.let { listOfThumbs->
             if (listOfThumbs.isNotEmpty()) {
                 for (th in listOfThumbs) {
                     if (th.index == 0) {
