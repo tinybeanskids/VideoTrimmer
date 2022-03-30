@@ -221,6 +221,7 @@ class VideoTrimmer @JvmOverloads constructor(
     }
 
     fun onSaveClicked() {
+        if (slowVideoSource == null) return
         icon_video_play.visibility = View.VISIBLE
         player?.playWhenReady = false
         Observable.fromCallable {
