@@ -284,6 +284,12 @@ class VideoTrimmer @JvmOverloads constructor(
             .subscribeOn(Schedulers.computation())
             .observeOn(Schedulers.computation())
             .doOnError { mOnVideoListener?.onFFmpegError(it) }
+            .doFinally {
+                slowVideoSource?.path?.let { src ->
+                    val f = File(src)
+                    if (f.exists()) f.delete()
+                }
+            }
             .subscribe()
             .addTo(compositeDisposable)
     }
