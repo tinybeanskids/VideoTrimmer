@@ -15,13 +15,13 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.video.trimmer.interfaces.OnTrimVideoListener
-import com.video.trimmer.interfaces.OnVideoListener
+import com.video.trimmer.interfaces.OnVideoLoadListener
 import kotlinx.android.synthetic.main.activity_trimmer.*
 import java.io.File
 import java.util.concurrent.TimeUnit
 
 
-class TrimmerActivity : AppCompatActivity(), OnTrimVideoListener, OnVideoListener {
+class TrimmerActivity : AppCompatActivity(), OnTrimVideoListener, OnVideoLoadListener {
 
     private val progressDialog: VideoProgressIndeterminateDialog by lazy {
         VideoProgressIndeterminateDialog(
@@ -32,7 +32,7 @@ class TrimmerActivity : AppCompatActivity(), OnTrimVideoListener, OnVideoListene
     private val loadingDialog: VideoProgressIndeterminateDialog by lazy {
         VideoProgressIndeterminateDialog(
             this,
-            "Loading slow motion video. Please wait..."
+            "Loading video. Please wait..."
         )
     }
 
@@ -47,7 +47,7 @@ class TrimmerActivity : AppCompatActivity(), OnTrimVideoListener, OnVideoListene
                     ?: "" else ""
             videoTrimmer.setTextTimeSelectionTypeface(FontsHelper[this, FontsConstants.SEMI_BOLD])
                 .setOnTrimVideoListener(this)
-                .setOnVideoListener(this)
+                .setOnVideoLoadListener(this)
                 .setVideoInformationVisibility(true)
                 .setDestinationFile(getDestinationFile())
                 .setMaxDuration(3,TimeUnit.MINUTES)
@@ -110,22 +110,21 @@ class TrimmerActivity : AppCompatActivity(), OnTrimVideoListener, OnVideoListene
 
     }
 
-    override fun onFFmpegError(throwable: Throwable) {
-        progressDialog.dismiss()
-    }
-
     override fun onInfo(info: String) {
 
     }
 
-    override fun onFFmpegFinished(path: String) {
+    override fun onVideoLoadStarted() {
+        loadingDialog.show()
+    }
+
+    override fun onVideoLoadFinished(path: String) {
         loadingDialog.dismiss()
         videoTrimmer.visibility = View.VISIBLE
         videoTrimmer.setVideoPath(path)
     }
-
-    override fun onFFmpegStarted() {
-        loadingDialog.show()
+    override fun onVideoLoadError(throwable: Throwable) {
+        progressDialog.dismiss()
     }
 
     var doWithPermissionCheckAction: (() -> Unit)? = null

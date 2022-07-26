@@ -80,12 +80,9 @@ class VideoOptions {
         return 30
     }
 
-    fun encodeSlowMotionVideo(onVideoListener: OnVideoListener?, inputCopy: File, temp_file: File): Observable<Pair<String, Int>> {
-        onVideoListener?.onFFmpegStarted()
+    fun encodeSlowMotionVideo(inputCopy: File, temp_file: File): Observable<Pair<String, Int>> {
         var slowMotion = false
         return Observable.fromCallable { inputCopy }
-            .subscribeOn(AndroidSchedulers.mainThread())
-            .observeOn(AndroidSchedulers.mainThread())
             .map {
                 val mediaInformation = FFprobe.getMediaInformation(inputCopy.path)
                 val mediaInformationModel = Gson().fromJson(mediaInformation.allProperties.toString(), VideoProperties::class.java)
@@ -119,7 +116,8 @@ class VideoOptions {
                     deleteFiles(inputCopy.path)
                 else
                     deleteFiles(temp_file.path)
-
+            }.doOnError {
+                it.printStackTrace()
             }
 
     }
