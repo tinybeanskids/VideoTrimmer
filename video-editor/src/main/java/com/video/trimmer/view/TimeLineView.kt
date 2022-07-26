@@ -3,6 +3,7 @@ package com.video.trimmer.view
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
+import android.media.MediaDataSource
 import android.media.MediaMetadataRetriever
 import android.net.Uri
 import android.util.AttributeSet
@@ -82,6 +83,9 @@ class TimeLineView @JvmOverloads constructor(
             .subscribeOn(Schedulers.io())
             .observeOn(Schedulers.io())
             .doOnComplete { compositeDisposable.clear() }
+            .onErrorReturn {
+                it.printStackTrace()
+            }
             .subscribe()
             .addTo(compositeDisposable)
     }
