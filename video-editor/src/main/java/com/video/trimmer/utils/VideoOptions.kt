@@ -1,18 +1,14 @@
 package com.video.trimmer.utils
 
-import android.util.Log
 import com.arthenica.mobileffmpeg.Config
 import com.arthenica.mobileffmpeg.FFmpeg
 import com.arthenica.mobileffmpeg.FFprobe
 import com.google.gson.Gson
-import com.video.trimmer.interfaces.OnTrimVideoListener
-import com.video.trimmer.interfaces.OnVideoListener
 import com.video.trimmer.model.Stream
 import com.video.trimmer.model.VideoProperties
-import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers
 import io.reactivex.rxjava3.core.Observable
+import io.reactivex.rxjava3.schedulers.Schedulers
 import java.io.File
-
 
 class VideoOptions {
 
@@ -24,7 +20,6 @@ class VideoOptions {
         tempPath: String,
         outputPath: String?,
         file: File?,
-        listener: OnTrimVideoListener?,
         maxSize: Int,
         fps: Int
     ) = Observable.create<Int> { emitter ->
@@ -40,35 +35,20 @@ class VideoOptions {
 
             file?.let {
                 if (maxSize != -1 && it.length() / 1024 > maxSize) {
-                    resultCode = 1
+                    resultCode = TrimmerStatusCode.FAILED.value
                 }
             }
 
-            when (resultCode) {
-                TrimmerStatusCode.SUCCESS.value -> {
-                    //file?.let { listener?.getResult(it) }
-                }
-                TrimmerStatusCode.FAILED.value -> {
-                    //listener?.onError("Command execution cancelled by user.")
-                    outputPath?.let { deleteFiles(it) }
-                }
-                TrimmerStatusCode.LIMIT_REACHED.value -> {
-                    //listener?.onError("File size is greater then ${maxSize / 1000} MB")
-                    outputPath?.let { deleteFiles(it) }
-                }
-                else -> {
-                    //listener?.onError(String.format("Command execution failed with rc=%d and the output below.", resultCode))
-                    Config.printLastCommandOutput(Log.INFO)
-                    outputPath?.let { deleteFiles(it) }
-                }
+            if (resultCode != TrimmerStatusCode.SUCCESS.value) {
+                outputPath?.let { deleteFiles(it) }
             }
+
             emitter.onNext(resultCode)
         } catch (e: Exception) {
-            //listener?.onError(e.localizedMessage ?: "generic error")
-            emitter.onError(e)
             outputPath?.let { deleteFiles(inputPath, it) }
+            emitter.onError(e)
         }
-    }
+    }.subscribeOn(Schedulers.computation())
 
     fun getFrameRateFromMediaStreams(streams: List<Stream>): Int{
         for (stream in streams){
@@ -83,6 +63,7 @@ class VideoOptions {
     fun encodeSlowMotionVideo(inputCopy: File, temp_file: File): Observable<Pair<String, Int>> {
         var slowMotion = false
         return Observable.fromCallable { inputCopy }
+            .subscribeOn(Schedulers.computation())
             .map {
                 val mediaInformation = FFprobe.getMediaInformation(inputCopy.path)
                 val mediaInformationModel = Gson().fromJson(mediaInformation.allProperties.toString(), VideoProperties::class.java)

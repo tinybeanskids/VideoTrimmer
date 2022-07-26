@@ -282,7 +282,6 @@ class VideoTrimmer @JvmOverloads constructor(
                 tempCopy.path,
                 outputPath,
                 destinationFile,
-                mOnTrimVideoListener,
                 mMaxSize,
                 fps
             )
@@ -507,15 +506,12 @@ class VideoTrimmer @JvmOverloads constructor(
                     inputVideoFile.copyInputStreamToFile(this)
                 }
             } ?: throw Exception("Error getting video.")
-        }.subscribeOn(Schedulers.io())
+        }
+            .subscribeOn(Schedulers.io())
             .observeOn(AndroidSchedulers.mainThread())
-            .map {
-                videoSource?.let { timeLineView.setVideo(it) } ?: throw Exception("Error getting video.")
-            }
+            .map { videoSource?.let { timeLineView.setVideo(it) } ?: throw Exception("Error getting video.") }
             .observeOn(Schedulers.computation())
-            .flatMap {
-                VideoOptions().encodeSlowMotionVideo(inputVideoFile, temporalFrameDropVideoFile)
-            }
+            .flatMap { VideoOptions().encodeSlowMotionVideo(inputVideoFile, temporalFrameDropVideoFile) }
             .observeOn(AndroidSchedulers.mainThread())
             .map { (filePath, framesPerSecond) ->
                 onVideoLoadListener?.onVideoLoadFinished(filePath)
@@ -523,7 +519,6 @@ class VideoTrimmer @JvmOverloads constructor(
                 slowVideoSource = Uri.parse(filePath)
                 fps = framesPerSecond
             }.doOnError { error ->
-                Toast.makeText(context, error.message.toString(), Toast.LENGTH_LONG).show()
                 VideoOptions().deleteFiles(temporalFrameDropVideoFile.path, inputVideoFile.path)
                 onVideoLoadListener?.onVideoLoadError(error)
                 onVideoListener?.onFFmpegError(error)
