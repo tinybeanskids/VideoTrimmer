@@ -228,7 +228,6 @@ class VideoTrimmer @JvmOverloads constructor(
         if (slowVideoSource == null) return
         icon_video_play.visibility = View.VISIBLE
         player?.playWhenReady = false
-        Observable.fromCallable {
             val mediaMetadataRetriever = MediaMetadataRetriever()
             mediaMetadataRetriever.setDataSource(context, slowVideoSource)
             val metaDataKeyDuration = mediaMetadataRetriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLong()
@@ -273,19 +272,16 @@ class VideoTrimmer @JvmOverloads constructor(
 
             videoSource?.let { context.contentResolver.openInputStream(it)?.apply { inputCopy.copyInputStreamToFile(this) } }
 
-            Triple(inputCopy, tempCopy, outPutPath)
-        }.flatMap { (inputCopy, tempCopy, outputPath) ->
             VideoOptions().trimVideoFromMemory(
                 TrimVideoUtils.stringForTime(mStartPosition),
                 TrimVideoUtils.stringForTime(mEndPosition),
                 inputCopy.path,
                 tempCopy.path,
-                outputPath,
+                outPutPath,
                 destinationFile,
                 mMaxSize,
                 fps
             )
-        }
             .subscribeOn(Schedulers.computation())
             .observeOn(AndroidSchedulers.mainThread())
             .map { resultCode ->
@@ -305,7 +301,7 @@ class VideoTrimmer @JvmOverloads constructor(
                 }
                 Unit
             }
-            .doOnError { onVideoLoadListener?.onVideoLoadError(it) }
+            .onErrorReturn { onVideoLoadListener?.onVideoLoadError(it) }
             .doFinally {
                 slowVideoSource?.path?.let { src ->
                     val f = File(src)
