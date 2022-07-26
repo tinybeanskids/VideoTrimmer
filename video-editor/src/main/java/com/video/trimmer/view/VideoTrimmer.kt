@@ -270,21 +270,25 @@ class VideoTrimmer @JvmOverloads constructor(
             val inputCopy = File.createTempFile("temp-video-input", ".mp4", context.cacheDir)
             val tempCopy = File.createTempFile("temp-video-recode", ".mp4", context.cacheDir)
 
-            videoSource?.let { context.contentResolver.openInputStream(it)?.apply { inputCopy.copyInputStreamToFile(this) } }
-
-            VideoOptions().trimVideoFromMemory(
-                TrimVideoUtils.stringForTime(mStartPosition),
-                TrimVideoUtils.stringForTime(mEndPosition),
-                inputCopy.path,
-                tempCopy.path,
-                outPutPath,
-                destinationFile,
-                mMaxSize,
-                fps
-            )
-            .subscribeOn(Schedulers.computation())
-            .observeOn(AndroidSchedulers.mainThread())
-            .map { resultCode ->
+        Observable.fromCallable {
+            videoSource?.let {
+                context.contentResolver.openInputStream(it)?.apply { inputCopy.copyInputStreamToFile(this) }
+            } ?: throw Throwable("Error loading file")
+        }
+            .subscribeOn(Schedulers.io())
+            .observeOn(Schedulers.computation())
+            .flatMap {
+                VideoOptions().trimVideoFromMemory(
+                    TrimVideoUtils.stringForTime(mStartPosition),
+                    TrimVideoUtils.stringForTime(mEndPosition),
+                    inputCopy.path,
+                    tempCopy.path,
+                    outPutPath,
+                    destinationFile,
+                    mMaxSize,
+                    fps
+                )
+            }.map { resultCode ->
                 when (resultCode) {
                     TrimmerStatusCode.SUCCESS.value -> {
                         destinationFile?.let { mOnTrimVideoListener?.getResult(it) }
@@ -296,7 +300,12 @@ class VideoTrimmer @JvmOverloads constructor(
                         mOnTrimVideoListener?.onError("File size is greater than ${mMaxSize / 1000} MB")
                     }
                     else -> {
-                        mOnTrimVideoListener?.onError(String.format("Command execution failed with rc=%d and the output below.", resultCode))
+                        mOnTrimVideoListener?.onError(
+                            String.format(
+                                "Command execution failed with rc=%d and the output below.",
+                                resultCode
+                            )
+                        )
                     }
                 }
                 Unit
