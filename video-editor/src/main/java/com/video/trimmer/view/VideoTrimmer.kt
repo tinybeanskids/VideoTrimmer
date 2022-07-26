@@ -12,7 +12,6 @@ import android.os.Handler
 import android.os.Message
 import android.os.ParcelFileDescriptor
 import android.util.AttributeSet
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.widget.FrameLayout
@@ -27,12 +26,12 @@ import androidx.media3.exoplayer.source.ProgressiveMediaSource
 import androidx.media3.exoplayer.trackselection.AdaptiveTrackSelection
 import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
 import androidx.media3.exoplayer.trackselection.TrackSelector
-import com.arthenica.mobileffmpeg.Config
 import com.video.trimmer.R
 import com.video.trimmer.interfaces.OnProgressVideoListener
 import com.video.trimmer.interfaces.OnRangeSeekBarListener
 import com.video.trimmer.interfaces.OnTrimVideoListener
 import com.video.trimmer.interfaces.OnVideoListener
+import com.video.trimmer.interfaces.OnVideoLoadListener
 import com.video.trimmer.utils.RealPathUtil
 import com.video.trimmer.utils.TrimVideoUtils
 import com.video.trimmer.utils.TrimmerStatusCode
@@ -71,7 +70,8 @@ class VideoTrimmer @JvmOverloads constructor(
     private var mListeners: ArrayList<OnProgressVideoListener> = ArrayList()
 
     private var mOnTrimVideoListener: OnTrimVideoListener? = null
-    private var mOnVideoListener: OnVideoListener? = null
+    private var onVideoListener: OnVideoListener? = null
+    private var onVideoLoadListener: OnVideoLoadListener? = null
 
     private var mDuration = 0f
     private var mTimeVideo = 0f
@@ -306,7 +306,7 @@ class VideoTrimmer @JvmOverloads constructor(
                 }
                 Unit
             }
-            .doOnError { mOnVideoListener?.onFFmpegError(it) }
+            .doOnError { onVideoLoadListener?.onVideoLoadError(it) }
             .doFinally {
                 slowVideoSource?.path?.let { src ->
                     val f = File(src)
@@ -467,8 +467,17 @@ class VideoTrimmer @JvmOverloads constructor(
         return this
     }
 
+    /**
+     * Deprecated - please use [setOnVideoLoadListener] instead.
+     */
+    @Deprecated("")
     fun setOnVideoListener(onVideoListener: OnVideoListener): VideoTrimmer {
-        mOnVideoListener = onVideoListener
+        this.onVideoListener = onVideoListener
+        return this
+    }
+
+    fun setOnVideoLoadListener(onVideoLoadListener: OnVideoLoadListener): VideoTrimmer {
+        this.onVideoLoadListener = onVideoLoadListener
         return this
     }
 
@@ -490,27 +499,37 @@ class VideoTrimmer @JvmOverloads constructor(
         videoSource = videoURI
         val temporalFrameDropVideoFile = File.createTempFile("framerate_drop", ".mp4", context.cacheDir)
         val inputVideoFile = File.createTempFile("temp-video-input", ".mp4", context.cacheDir)
-        try {
+        onVideoLoadListener?.onVideoLoadStarted()
+        onVideoListener?.onFFmpegStarted()
+        Observable.fromCallable {
             videoSource?.let {
                 context.contentResolver.openInputStream(it)?.apply {
                     inputVideoFile.copyInputStreamToFile(this)
                 }
-            } ?: mOnTrimVideoListener?.onError("Error getting video.")
-        } catch (e: java.lang.Exception) {
-            Toast.makeText(context, e.message.toString(), Toast.LENGTH_LONG).show()
-            VideoOptions().deleteFiles(temporalFrameDropVideoFile.path, inputVideoFile.path)
-            mOnVideoListener?.onFFmpegError(e)
-            return
-        }
-        videoSource?.let { timeLineView.setVideo(it) } ?: mOnTrimVideoListener?.onError("Error getting video.")
-        VideoOptions().encodeSlowMotionVideo(mOnVideoListener, inputVideoFile, temporalFrameDropVideoFile)
-            .doOnError {
-                mOnVideoListener?.onFFmpegError(it)
-            }.subscribe {
-                mOnVideoListener?.onFFmpegFinished(it.first)
-                slowVideoSource = Uri.parse(it.first)
-                fps = it.second
-            }.addTo(compositeDisposable)
+            } ?: throw Exception("Error getting video.")
+        }.subscribeOn(Schedulers.io())
+            .observeOn(AndroidSchedulers.mainThread())
+            .map {
+                videoSource?.let { timeLineView.setVideo(it) } ?: throw Exception("Error getting video.")
+            }
+            .observeOn(Schedulers.computation())
+            .flatMap {
+                VideoOptions().encodeSlowMotionVideo(inputVideoFile, temporalFrameDropVideoFile)
+            }
+            .observeOn(AndroidSchedulers.mainThread())
+            .map { (filePath, framesPerSecond) ->
+                onVideoLoadListener?.onVideoLoadFinished(filePath)
+                onVideoListener?.onFFmpegFinished(filePath)
+                slowVideoSource = Uri.parse(filePath)
+                fps = framesPerSecond
+            }.doOnError { error ->
+                Toast.makeText(context, error.message.toString(), Toast.LENGTH_LONG).show()
+                VideoOptions().deleteFiles(temporalFrameDropVideoFile.path, inputVideoFile.path)
+                onVideoLoadListener?.onVideoLoadError(error)
+                onVideoListener?.onFFmpegError(error)
+            }
+            .subscribe()
+            .addTo(compositeDisposable)
     }
 
     fun setVideoPath(path: String): VideoTrimmer {
