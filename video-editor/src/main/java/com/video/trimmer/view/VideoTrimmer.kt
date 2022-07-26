@@ -514,7 +514,7 @@ class VideoTrimmer @JvmOverloads constructor(
                 onVideoListener?.onFFmpegFinished(filePath)
                 slowVideoSource = Uri.parse(filePath)
                 fps = framesPerSecond
-            }.doOnError { error ->
+            }.onErrorReturn { error ->
                 VideoOptions().deleteFiles(temporalFrameDropVideoFile.path, inputVideoFile.path)
                 onVideoLoadListener?.onVideoLoadError(error)
                 onVideoListener?.onFFmpegError(error)
