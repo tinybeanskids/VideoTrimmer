@@ -12,6 +12,7 @@ import android.os.Handler
 import android.os.Message
 import android.os.ParcelFileDescriptor
 import android.util.AttributeSet
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.widget.FrameLayout
@@ -26,6 +27,7 @@ import androidx.media3.exoplayer.source.ProgressiveMediaSource
 import androidx.media3.exoplayer.trackselection.AdaptiveTrackSelection
 import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
 import androidx.media3.exoplayer.trackselection.TrackSelector
+import com.arthenica.mobileffmpeg.Config
 import com.video.trimmer.R
 import com.video.trimmer.interfaces.OnProgressVideoListener
 import com.video.trimmer.interfaces.OnRangeSeekBarListener
@@ -33,8 +35,10 @@ import com.video.trimmer.interfaces.OnTrimVideoListener
 import com.video.trimmer.interfaces.OnVideoListener
 import com.video.trimmer.utils.RealPathUtil
 import com.video.trimmer.utils.TrimVideoUtils
+import com.video.trimmer.utils.TrimmerStatusCode
 import com.video.trimmer.utils.VideoOptions
 import com.video.trimmer.utils.copyInputStreamToFile
+import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers
 import io.reactivex.rxjava3.core.Observable
 import io.reactivex.rxjava3.disposables.CompositeDisposable
 import io.reactivex.rxjava3.kotlin.addTo
@@ -269,12 +273,14 @@ class VideoTrimmer @JvmOverloads constructor(
 
             videoSource?.let { context.contentResolver.openInputStream(it)?.apply { inputCopy.copyInputStreamToFile(this) } }
 
+            Triple(inputCopy, tempCopy, outPutPath)
+        }.flatMap { (inputCopy, tempCopy, outputPath) ->
             VideoOptions().trimVideoFromMemory(
                 TrimVideoUtils.stringForTime(mStartPosition),
                 TrimVideoUtils.stringForTime(mEndPosition),
                 inputCopy.path,
                 tempCopy.path,
-                outPutPath,
+                outputPath,
                 destinationFile,
                 mOnTrimVideoListener,
                 mMaxSize,
@@ -282,7 +288,24 @@ class VideoTrimmer @JvmOverloads constructor(
             )
         }
             .subscribeOn(Schedulers.computation())
-            .observeOn(Schedulers.computation())
+            .observeOn(AndroidSchedulers.mainThread())
+            .map { resultCode ->
+                when (resultCode) {
+                    TrimmerStatusCode.SUCCESS.value -> {
+                        destinationFile?.let { mOnTrimVideoListener?.getResult(it) }
+                    }
+                    TrimmerStatusCode.FAILED.value -> {
+                        mOnTrimVideoListener?.onError("Command execution cancelled by user.")
+                    }
+                    TrimmerStatusCode.LIMIT_REACHED.value -> {
+                        mOnTrimVideoListener?.onError("File size is greater than ${mMaxSize / 1000} MB")
+                    }
+                    else -> {
+                        mOnTrimVideoListener?.onError(String.format("Command execution failed with rc=%d and the output below.", resultCode))
+                    }
+                }
+                Unit
+            }
             .doOnError { mOnVideoListener?.onFFmpegError(it) }
             .doFinally {
                 slowVideoSource?.path?.let { src ->
