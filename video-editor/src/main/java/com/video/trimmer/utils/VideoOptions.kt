@@ -27,7 +27,7 @@ class VideoOptions {
         listener: OnTrimVideoListener?,
         maxSize: Int,
         fps: Int
-    ) {
+    ) = Observable.create<Int> { emitter ->
         try {
             var resultCode: Int = if (fps > 118) {
                 FFmpeg.execute("-y -i $inputPath -filter_complex \"[0:v]setpts=3.3*PTS[v];[0:a]atempo=0.55,atempo=0.6,asetrate=44100*1.25,aformat=sample_rates=44100[a]\" -map \"[v]\" -map \"[a]\" -r 30 $tempPath")
@@ -46,24 +46,26 @@ class VideoOptions {
 
             when (resultCode) {
                 TrimmerStatusCode.SUCCESS.value -> {
-                    file?.let { listener?.getResult(it) }
+                    //file?.let { listener?.getResult(it) }
                 }
                 TrimmerStatusCode.FAILED.value -> {
-                    listener?.onError("Command execution cancelled by user.")
+                    //listener?.onError("Command execution cancelled by user.")
                     outputPath?.let { deleteFiles(it) }
                 }
                 TrimmerStatusCode.LIMIT_REACHED.value -> {
-                    listener?.onError("File size is greater then ${maxSize / 1000} MB")
+                    //listener?.onError("File size is greater then ${maxSize / 1000} MB")
                     outputPath?.let { deleteFiles(it) }
                 }
                 else -> {
-                    listener?.onError(String.format("Command execution failed with rc=%d and the output below.", resultCode))
+                    //listener?.onError(String.format("Command execution failed with rc=%d and the output below.", resultCode))
                     Config.printLastCommandOutput(Log.INFO)
                     outputPath?.let { deleteFiles(it) }
                 }
             }
+            emitter.onNext(resultCode)
         } catch (e: Exception) {
-            listener?.onError(e.localizedMessage ?: "generic error")
+            //listener?.onError(e.localizedMessage ?: "generic error")
+            emitter.onError(e)
             outputPath?.let { deleteFiles(inputPath, it) }
         }
     }
